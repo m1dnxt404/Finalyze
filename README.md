@@ -4,7 +4,7 @@ A Python tool that uses AI to analyze company earnings reports, extract key fina
 
 ## Features
 
-- **Multi-Provider AI Support**: Anthropic Claude, OpenAI GPT, Google Gemini, and DeepSeek
+- **Multi-Provider AI Support**: Anthropic Claude, OpenAI GPT, Google Gemini, DeepSeek, and Ollama (local)
 - **Web Dashboard**: FastAPI-powered browser UI with real-time analysis
 - **Multiple Input Methods**: Paste text, upload files (PDF, DOCX, TXT), or import from Google Docs
 - **Financial Extraction**: Revenue, EPS, margins, guidance, and segment breakdowns
@@ -122,6 +122,9 @@ analyzer = EarningsReportAnalyzer(provider="gemini")
 
 # Use DeepSeek
 analyzer = EarningsReportAnalyzer(provider="deepseek")
+
+# Use Ollama (local, requires Ollama running at localhost:11434)
+analyzer = EarningsReportAnalyzer(provider="ollama")
 ```
 
 ### Compare Reports
@@ -222,6 +225,7 @@ Typical usage per earnings report:
 | OpenAI GPT-4o    | 1,500-3,000  | 1,000-2,000   | $0.01-0.04           |
 | Google Gemini    | 1,500-3,000  | 1,000-2,000   | Free tier / low cost |
 | DeepSeek         | 1,500-3,000  | 1,000-2,000   | < $0.01              |
+| Ollama (local)   | N/A          | N/A           | Free                 |
 
 ## Troubleshooting
 

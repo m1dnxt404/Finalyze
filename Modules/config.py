@@ -23,6 +23,12 @@ PROVIDERS = {
         "env_key": "DEEPSEEK_API_KEY",
         "default_model": "deepseek-chat",
     },
+    "ollama": {
+        "name": "Ollama (Local)",
+        "env_key": "OLLAMA_API_KEY",
+        "default_model": "llama3.1",
+        "base_url": "http://localhost:11434/v1",
+    },
 }
 
 DEFAULT_MAX_TOKENS = 4000

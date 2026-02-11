@@ -16,7 +16,7 @@ class EarningsReportAnalyzer:
     def __init__(self, provider: str = "anthropic", api_key: Optional[str] = None):
         """
         Args:
-            provider: AI provider to use ("anthropic", "openai", "gemini", "deepseek")
+            provider: AI provider to use ("anthropic", "openai", "gemini", "deepseek", "ollama")
             api_key: API key (defaults to provider-specific env variable)
         """
         if provider not in PROVIDERS:

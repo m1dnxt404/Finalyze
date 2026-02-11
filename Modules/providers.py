@@ -1,6 +1,6 @@
 """
 AI provider client factory and unified API call interface.
-Supports Anthropic, OpenAI, Gemini, and DeepSeek.
+Supports Anthropic, OpenAI, Gemini, DeepSeek, and Ollama.
 """
 
 import os
@@ -29,6 +29,10 @@ def create_client(provider: str, api_key: Optional[str] = None):
         from openai import OpenAI
         return OpenAI(api_key=key, base_url="https://api.deepseek.com")
 
+    if provider == "ollama":
+        from openai import OpenAI
+        return OpenAI(api_key=key or "ollama", base_url=config.get("base_url"))
+
     raise ValueError(f"Unknown provider: {provider}")
 
 
@@ -51,7 +55,7 @@ def call_provider(client, provider: str, model: str, prompt: str,
             "output": response.usage.output_tokens,
         }
 
-    if provider in ("openai", "deepseek"):
+    if provider in ("openai", "deepseek", "ollama"):
         response = client.chat.completions.create(
             model=model,
             max_tokens=max_tokens,
