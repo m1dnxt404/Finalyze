@@ -9,6 +9,7 @@ import tempfile
 import os
 from datetime import datetime
 from earnings_analyzer import EarningsReportAnalyzer, PROVIDERS
+from text_extractor import extract_from_uploaded_file, extract_from_google_docs_url
 
 app = Flask(__name__)
 
@@ -37,20 +38,47 @@ def get_providers():
 
 @app.route('/api/analyze', methods=['POST'])
 def analyze():
-    """API endpoint for analyzing earnings reports"""
-    try:
-        data = request.get_json()
-        earnings_text = data.get('earnings_text', '')
-        company_name = data.get('company_name', '')
-        provider = data.get('provider', 'anthropic')
+    """API endpoint for analyzing earnings reports.
 
-        if not earnings_text:
+    Accepts three input modes:
+    - multipart/form-data with a 'file' field (PDF, DOCX, TXT upload)
+    - JSON with 'google_docs_url' (fetches text from a public Google Doc)
+    - JSON with 'earnings_text' (direct text paste, existing flow)
+    """
+    try:
+        # --- Determine input mode and extract text ---
+        if request.content_type and 'multipart/form-data' in request.content_type:
+            # File upload
+            uploaded = request.files.get('file')
+            if not uploaded or not uploaded.filename:
+                return jsonify({'error': 'No file provided'}), 400
+            company_name = request.form.get('company_name', '')
+            provider = request.form.get('provider', 'anthropic')
+            try:
+                earnings_text = extract_from_uploaded_file(uploaded)
+            except (ValueError, ImportError) as e:
+                return jsonify({'error': str(e)}), 400
+        else:
+            data = request.get_json()
+            company_name = data.get('company_name', '')
+            provider = data.get('provider', 'anthropic')
+            google_docs_url = data.get('google_docs_url', '')
+
+            if google_docs_url:
+                try:
+                    earnings_text = extract_from_google_docs_url(google_docs_url)
+                except (ValueError, ImportError) as e:
+                    return jsonify({'error': str(e)}), 400
+            else:
+                earnings_text = data.get('earnings_text', '')
+
+        if not earnings_text or not earnings_text.strip():
             return jsonify({'error': 'No earnings text provided'}), 400
 
-        # Perform analysis with selected provider
+        # --- Perform analysis with selected provider ---
         analyzer = EarningsReportAnalyzer(provider=provider)
         result = analyzer.analyze_earnings(earnings_text, company_name)
-        
+
         # Add to history
         history_entry = {
             'id': len(analysis_history),
@@ -60,9 +88,9 @@ def analyze():
             'analysis': result
         }
         analysis_history.append(history_entry)
-        
+
         return jsonify(result)
-        
+
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

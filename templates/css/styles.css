@@ -232,6 +232,7 @@ label {
 }
 
 input[type="text"],
+input[type="url"],
 textarea,
 select {
     width: 100%;
@@ -246,6 +247,7 @@ select {
 }
 
 input[type="text"]:focus,
+input[type="url"]:focus,
 textarea:focus,
 select:focus {
     outline: none;
@@ -277,6 +279,135 @@ textarea {
 
 .form-actions {
     padding-top: 6px;
+}
+
+/* ── Input method tabs ───────────────────────────────────────────── */
+
+.input-tabs {
+    display: flex;
+    gap: 4px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 4px;
+    margin-bottom: 18px;
+    width: fit-content;
+}
+
+.input-tab {
+    padding: 7px 18px;
+    border: none;
+    border-radius: 6px;
+    background: none;
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+    font-family: inherit;
+}
+
+.input-tab:hover {
+    color: var(--text);
+}
+
+.input-tab.active {
+    background: var(--accent);
+    color: #fff;
+}
+
+.input-panel {
+    display: none;
+}
+
+.input-panel.active {
+    display: block;
+}
+
+/* ── Upload zone ─────────────────────────────────────────────────── */
+
+.upload-zone {
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 40px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    color: var(--text-muted);
+}
+
+.upload-zone:hover,
+.upload-zone.drag-over {
+    border-color: var(--accent);
+    background: rgba(108, 92, 231, 0.06);
+}
+
+.upload-zone svg {
+    margin-bottom: 12px;
+    opacity: 0.5;
+}
+
+.upload-label {
+    font-size: 14px;
+    margin-bottom: 6px;
+}
+
+.upload-browse {
+    color: var(--accent);
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.upload-hint {
+    font-size: 12px;
+    opacity: 0.6;
+}
+
+/* ── File preview ────────────────────────────────────────────────── */
+
+.file-preview {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 10px;
+    padding: 10px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+}
+
+.file-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.file-remove {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 20px;
+    cursor: pointer;
+    padding: 0 4px;
+    line-height: 1;
+    transition: color 0.2s;
+}
+
+.file-remove:hover {
+    color: var(--red);
+}
+
+/* ── Input hint ──────────────────────────────────────────────────── */
+
+.input-hint {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 8px;
+    opacity: 0.7;
 }
 
 /* ── Buttons ─────────────────────────────────────────────────────── */

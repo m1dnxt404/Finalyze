@@ -60,9 +60,41 @@
                         </div>
                     </div>
 
-                    <div class="input-group">
-                        <label for="earnings-text">Earnings Report Text</label>
-                        <textarea id="earnings-text" placeholder="Paste the earnings report text here..."></textarea>
+                    <div class="input-tabs">
+                        <button class="input-tab active" onclick="switchInputMethod('paste')">Paste Text</button>
+                        <button class="input-tab" onclick="switchInputMethod('upload')">Upload File</button>
+                        <button class="input-tab" onclick="switchInputMethod('gdocs')">Google Docs</button>
+                    </div>
+
+                    <div id="input-paste" class="input-panel active">
+                        <div class="input-group">
+                            <label for="earnings-text">Earnings Report Text</label>
+                            <textarea id="earnings-text" placeholder="Paste the earnings report text here..."></textarea>
+                        </div>
+                    </div>
+
+                    <div id="input-upload" class="input-panel">
+                        <div class="input-group">
+                            <label>Upload Document</label>
+                            <div class="upload-zone" id="upload-zone">
+                                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                                <p class="upload-label">Drag & drop a file here, or <span class="upload-browse">browse</span></p>
+                                <p class="upload-hint">PDF, DOCX, or TXT &mdash; max 10 MB</p>
+                                <input type="file" id="file-input" accept=".pdf,.docx,.txt" hidden>
+                            </div>
+                            <div class="file-preview" id="file-preview" style="display:none">
+                                <span class="file-name" id="file-name"></span>
+                                <button class="file-remove" onclick="clearFileSelection()">&times;</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="input-gdocs" class="input-panel">
+                        <div class="input-group">
+                            <label for="gdocs-url">Google Docs URL</label>
+                            <input type="url" id="gdocs-url" placeholder="https://docs.google.com/document/d/...">
+                            <p class="input-hint">The document must be shared as "Anyone with the link can view".</p>
+                        </div>
                     </div>
 
                     <div class="form-actions">

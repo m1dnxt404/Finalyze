@@ -5,6 +5,9 @@ const PROVIDER_LABELS = {
     deepseek: 'DeepSeek'
 };
 
+let currentInputMethod = 'paste';
+let selectedFile = null;
+
 function switchTab(tabName) {
     document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('active'));
     event.currentTarget.classList.add('active');
@@ -22,22 +25,92 @@ function updateProviderBadge() {
     document.getElementById('provider-badge').textContent = PROVIDER_LABELS[provider] || provider;
 }
 
-async function analyzeReport() {
-    const earningsText = document.getElementById('earnings-text').value;
-    const companyName = document.getElementById('company-name').value;
-    const provider = document.getElementById('provider').value;
+/* ── Input method switching ─────────────────────────────────────── */
 
-    if (!earningsText.trim()) {
-        showError('Please enter earnings report text');
+function switchInputMethod(method) {
+    currentInputMethod = method;
+
+    document.querySelectorAll('.input-tab').forEach(btn => btn.classList.remove('active'));
+    event.currentTarget.classList.add('active');
+
+    document.querySelectorAll('.input-panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('input-' + method).classList.add('active');
+}
+
+/* ── File upload handling ───────────────────────────────────────── */
+
+function initFileUpload() {
+    const zone = document.getElementById('upload-zone');
+    const fileInput = document.getElementById('file-input');
+    if (!zone || !fileInput) return;
+
+    zone.addEventListener('click', () => fileInput.click());
+
+    zone.addEventListener('dragover', e => {
+        e.preventDefault();
+        zone.classList.add('drag-over');
+    });
+
+    zone.addEventListener('dragleave', () => {
+        zone.classList.remove('drag-over');
+    });
+
+    zone.addEventListener('drop', e => {
+        e.preventDefault();
+        zone.classList.remove('drag-over');
+        if (e.dataTransfer.files.length) {
+            handleFileSelection(e.dataTransfer.files[0]);
+        }
+    });
+
+    fileInput.addEventListener('change', () => {
+        if (fileInput.files.length) {
+            handleFileSelection(fileInput.files[0]);
+        }
+    });
+}
+
+function handleFileSelection(file) {
+    const allowed = ['.pdf', '.docx', '.txt'];
+    const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+
+    if (!allowed.includes(ext)) {
+        showError('Unsupported file type. Please upload a PDF, DOCX, or TXT file.');
         return;
     }
 
-    document.getElementById('loading').classList.add('show');
-    document.getElementById('results').classList.remove('show');
-    document.getElementById('error').classList.remove('show');
+    if (file.size > 10 * 1024 * 1024) {
+        showError('File too large. Maximum size is 10 MB.');
+        return;
+    }
 
-    try {
-        const response = await fetch('/api/analyze', {
+    selectedFile = file;
+    document.getElementById('file-name').textContent = file.name;
+    document.getElementById('file-preview').style.display = '';
+}
+
+function clearFileSelection() {
+    selectedFile = null;
+    document.getElementById('file-input').value = '';
+    document.getElementById('file-preview').style.display = 'none';
+    document.getElementById('file-name').textContent = '';
+}
+
+/* ── Analysis ───────────────────────────────────────────────────── */
+
+async function analyzeReport() {
+    const companyName = document.getElementById('company-name').value;
+    const provider = document.getElementById('provider').value;
+
+    let fetchOptions;
+
+    if (currentInputMethod === 'paste') {
+        const earningsText = document.getElementById('earnings-text').value;
+        if (!earningsText.trim()) {
+            showError('Please enter earnings report text');
+            return;
+        }
+        fetchOptions = {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -45,8 +118,43 @@ async function analyzeReport() {
                 company_name: companyName,
                 provider: provider
             })
-        });
+        };
+    } else if (currentInputMethod === 'upload') {
+        if (!selectedFile) {
+            showError('Please select a file to upload');
+            return;
+        }
+        const formData = new FormData();
+        formData.append('file', selectedFile);
+        formData.append('company_name', companyName);
+        formData.append('provider', provider);
+        fetchOptions = {
+            method: 'POST',
+            body: formData
+        };
+    } else if (currentInputMethod === 'gdocs') {
+        const gdocsUrl = document.getElementById('gdocs-url').value;
+        if (!gdocsUrl.trim()) {
+            showError('Please enter a Google Docs URL');
+            return;
+        }
+        fetchOptions = {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                google_docs_url: gdocsUrl,
+                company_name: companyName,
+                provider: provider
+            })
+        };
+    }
 
+    document.getElementById('loading').classList.add('show');
+    document.getElementById('results').classList.remove('show');
+    document.getElementById('error').classList.remove('show');
+
+    try {
+        const response = await fetch('/api/analyze', fetchOptions);
         const data = await response.json();
 
         if (response.ok) {
@@ -167,3 +275,9 @@ function escapeHtml(str) {
     div.textContent = str;
     return div.innerHTML;
 }
+
+/* ── Init ────────────────────────────────────────────────────────── */
+
+document.addEventListener('DOMContentLoaded', () => {
+    initFileUpload();
+});
