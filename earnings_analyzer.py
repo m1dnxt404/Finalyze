@@ -410,18 +410,21 @@ def main():
     analysis = analyzer.analyze_earnings(sample_report, "Tesla, Inc.")
     
     # Save detailed analysis to JSON
-    with open('/home/claude/earnings_analysis.json', 'w') as f:
+    output_dir = os.path.dirname(os.path.abspath(__file__))
+    analysis_path = os.path.join(output_dir, 'earnings_analysis.json')
+    with open(analysis_path, 'w', encoding='utf-8') as f:
         json.dump(analysis, f, indent=2)
-    print("✓ Detailed analysis saved to earnings_analysis.json\n")
-    
+    print(f"✓ Detailed analysis saved to {analysis_path}\n")
+
     # Generate and print investor brief
     brief = analyzer.generate_investor_brief(analysis)
     print(brief)
-    
+
     # Save brief to text file
-    with open('/home/claude/investor_brief.txt', 'w') as f:
+    brief_path = os.path.join(output_dir, 'investor_brief.txt')
+    with open(brief_path, 'w', encoding='utf-8') as f:
         f.write(brief)
-    print("✓ Investor brief saved to investor_brief.txt")
+    print(f"✓ Investor brief saved to {brief_path}")
 
 
 if __name__ == "__main__":

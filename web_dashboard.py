@@ -5,6 +5,8 @@ Run with: python web_dashboard.py
 
 from flask import Flask, render_template, request, jsonify, send_file, send_from_directory
 import json
+import tempfile
+import os
 from datetime import datetime
 from earnings_analyzer import EarningsReportAnalyzer, PROVIDERS
 
@@ -17,6 +19,11 @@ analysis_history = []
 def serve_css(filename):
     """Serve CSS files from templates/css"""
     return send_from_directory('templates/css', filename)
+
+@app.route('/js/<path:filename>')
+def serve_js(filename):
+    """Serve JS files from templates/js"""
+    return send_from_directory('templates/js', filename)
 
 @app.route('/')
 def index():
@@ -74,11 +81,11 @@ def export_analysis(analysis_id):
     
     # Create temporary file
     filename = f"analysis_{analysis_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-    filepath = f"/tmp/{filename}"
-    
-    with open(filepath, 'w') as f:
+    filepath = os.path.join(tempfile.gettempdir(), filename)
+
+    with open(filepath, 'w', encoding='utf-8') as f:
         json.dump(analysis, f, indent=2)
-    
+
     return send_file(filepath, as_attachment=True, download_name=filename)
 
 @app.route('/api/compare', methods=['POST'])
