@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Earnings Report Analyzer</title>
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Earnings Report Analyzer</h1>
+            <p>AI-powered financial analysis using Claude</p>
+        </div>
+        
+        <div class="main-content">
+            <div class="tabs">
+                <button class="tab active" onclick="switchTab('analyze')">Analyze Report</button>
+                <button class="tab" onclick="switchTab('history')">History</button>
+            </div>
+            
+            <div id="analyze-tab" class="tab-content active">
+                <div class="input-section">
+                    <div class="input-group">
+                        <label for="company-name">Company Name (Optional)</label>
+                        <input type="text" id="company-name" placeholder="e.g., Apple Inc.">
+                    </div>
+                    
+                    <div class="input-group">
+                        <label for="earnings-text">Earnings Report Text</label>
+                        <textarea id="earnings-text" placeholder="Paste the earnings report text here..."></textarea>
+                    </div>
+                    
+                    <button class="btn" onclick="analyzeReport()">Analyze Report</button>
+                </div>
+                
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    <p>Analyzing report with AI...</p>
+                </div>
+                
+                <div class="error" id="error"></div>
+                
+                <div class="results" id="results">
+                    <h2>Analysis Results</h2>
+                    
+                    <div class="metric-grid">
+                        <div class="metric-box">
+                            <div class="metric-label">Sentiment Score</div>
+                            <div class="metric-value" id="sentiment-score">--</div>
+                        </div>
+                        <div class="metric-box">
+                            <div class="metric-label">Overall Tone</div>
+                            <div class="metric-value" id="overall-tone">--</div>
+                        </div>
+                        <div class="metric-box">
+                            <div class="metric-label">EPS Result</div>
+                            <div class="metric-value" id="eps-result">--</div>
+                        </div>
+                        <div class="metric-box">
+                            <div class="metric-label">Revenue Growth</div>
+                            <div class="metric-value" id="revenue-growth">--</div>
+                        </div>
+                    </div>
+                    
+                    <div class="metric-card">
+                        <h3>Key Highlights</h3>
+                        <ul id="highlights-list"></ul>
+                    </div>
+                    
+                    <div class="metric-card">
+                        <h3>Concerns & Risks</h3>
+                        <ul id="concerns-list"></ul>
+                    </div>
+                    
+                    <div class="metric-card">
+                        <h3>Executive Summary</h3>
+                        <p id="summary"></p>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="history-tab" class="tab-content">
+                <h2>Analysis History</h2>
+                <div id="history-list"></div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        function switchTab(tabName) {
+            // Update tab buttons
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Update tab content
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(tabName + '-tab').classList.add('active');
+            
+            if (tabName === 'history') {
+                loadHistory();
+            }
+        }
+        
+        async function analyzeReport() {
+            const earningsText = document.getElementById('earnings-text').value;
+            const companyName = document.getElementById('company-name').value;
+            
+            if (!earningsText.trim()) {
+                showError('Please enter earnings report text');
+                return;
+            }
+            
+            // Show loading
+            document.getElementById('loading').classList.add('show');
+            document.getElementById('results').classList.remove('show');
+            document.getElementById('error').classList.remove('show');
+            
+            try {
+                const response = await fetch('/api/analyze', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        earnings_text: earningsText,
+                        company_name: companyName
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    displayResults(data);
+                } else {
+                    showError(data.error || 'Analysis failed');
+                }
+            } catch (error) {
+                showError('Network error: ' + error.message);
+            } finally {
+                document.getElementById('loading').classList.remove('show');
+            }
+        }
+        
+        function displayResults(data) {
+            // Sentiment
+            const sentimentScore = data.sentiment_analysis?.sentiment_score || 0;
+            document.getElementById('sentiment-score').textContent = sentimentScore + '/100';
+            document.getElementById('sentiment-score').className = 'metric-value ' + 
+                (sentimentScore > 70 ? 'sentiment-positive' : 
+                 sentimentScore > 40 ? 'sentiment-neutral' : 'sentiment-negative');
+            
+            // Overall tone
+            document.getElementById('overall-tone').textContent = 
+                data.sentiment_analysis?.overall_tone || 'N/A';
+            
+            // EPS
+            const epsResult = data.financial_metrics?.earnings?.beat_miss || 'N/A';
+            document.getElementById('eps-result').textContent = epsResult.toUpperCase();
+            
+            // Revenue growth
+            document.getElementById('revenue-growth').textContent = 
+                data.financial_metrics?.revenue?.yoy_growth || 'N/A';
+            
+            // Highlights
+            const highlightsList = document.getElementById('highlights-list');
+            highlightsList.innerHTML = '';
+            (data.key_highlights || []).forEach(highlight => {
+                const li = document.createElement('li');
+                li.textContent = highlight;
+                highlightsList.appendChild(li);
+            });
+            
+            // Concerns
+            const concernsList = document.getElementById('concerns-list');
+            concernsList.innerHTML = '';
+            (data.concerns_risks || []).forEach(concern => {
+                const li = document.createElement('li');
+                li.textContent = concern;
+                concernsList.appendChild(li);
+            });
+            
+            // Summary
+            document.getElementById('summary').textContent = 
+                data.analyst_summary || 'No summary available';
+            
+            // Show results
+            document.getElementById('results').classList.add('show');
+        }
+        
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.classList.add('show');
+            setTimeout(() => {
+                errorDiv.classList.remove('show');
+            }, 5000);
+        }
+        
+        async function loadHistory() {
+            try {
+                const response = await fetch('/api/history');
+                const history = await response.json();
+                
+                const historyList = document.getElementById('history-list');
+                historyList.innerHTML = '';
+                
+                if (history.length === 0) {
+                    historyList.innerHTML = '<p>No analysis history yet.</p>';
+                    return;
+                }
+                
+                history.reverse().forEach(item => {
+                    const card = document.createElement('div');
+                    card.className = 'metric-card';
+                    card.innerHTML = `
+                        <h3>${item.company}</h3>
+                        <p>Analyzed: ${new Date(item.timestamp).toLocaleString()}</p>
+                        <p>Sentiment Score: ${item.sentiment_score}/100</p>
+                    `;
+                    historyList.appendChild(card);
+                });
+            } catch (error) {
+                console.error('Failed to load history:', error);
+            }
+        }
+    </script>
+</body>
+</html>
