@@ -1,24 +1,77 @@
 """
 AI-Powered Earnings Report Analyzer
 Analyzes company earnings reports to extract key metrics, sentiment, and insights
+Supports multiple AI providers: Anthropic, OpenAI, Gemini, and DeepSeek
 """
 
 import os
 import json
-from anthropic import Anthropic
 from typing import Dict, List, Optional
 from datetime import datetime
 
+PROVIDERS = {
+    "anthropic": {
+        "name": "Anthropic (Claude)",
+        "env_key": "ANTHROPIC_API_KEY",
+        "default_model": "claude-sonnet-4-20250514",
+    },
+    "openai": {
+        "name": "OpenAI (GPT)",
+        "env_key": "OPENAI_API_KEY",
+        "default_model": "gpt-4o",
+    },
+    "gemini": {
+        "name": "Google Gemini",
+        "env_key": "GEMINI_API_KEY",
+        "default_model": "gemini-2.0-flash",
+    },
+    "deepseek": {
+        "name": "DeepSeek",
+        "env_key": "DEEPSEEK_API_KEY",
+        "default_model": "deepseek-chat",
+    },
+}
+
+
+def _create_client(provider: str, api_key: Optional[str] = None):
+    """Create an API client for the given provider."""
+    config = PROVIDERS[provider]
+    key = api_key or os.environ.get(config["env_key"])
+
+    if provider == "anthropic":
+        from anthropic import Anthropic
+        return Anthropic(api_key=key)
+
+    elif provider == "openai":
+        from openai import OpenAI
+        return OpenAI(api_key=key)
+
+    elif provider == "gemini":
+        from google import genai
+        return genai.Client(api_key=key)
+
+    elif provider == "deepseek":
+        from openai import OpenAI
+        return OpenAI(api_key=key, base_url="https://api.deepseek.com")
+
+    raise ValueError(f"Unknown provider: {provider}")
+
+
 class EarningsReportAnalyzer:
-    def __init__(self, api_key: Optional[str] = None):
+    def __init__(self, provider: str = "anthropic", api_key: Optional[str] = None):
         """
         Initialize the earnings report analyzer
-        
+
         Args:
-            api_key: Anthropic API key (defaults to ANTHROPIC_API_KEY env variable)
+            provider: AI provider to use ("anthropic", "openai", "gemini", "deepseek")
+            api_key: API key (defaults to provider-specific env variable)
         """
-        self.client = Anthropic(api_key=api_key or os.environ.get("ANTHROPIC_API_KEY"))
-        self.model = "claude-sonnet-4-20250514"
+        if provider not in PROVIDERS:
+            raise ValueError(f"Unknown provider '{provider}'. Choose from: {list(PROVIDERS.keys())}")
+
+        self.provider = provider
+        self.model = PROVIDERS[provider]["default_model"]
+        self.client = _create_client(provider, api_key)
         
     def create_analysis_prompt(self, earnings_text: str, company_name: str = None) -> str:
         """
@@ -114,71 +167,103 @@ Be thorough but concise. If information is not available in the report, use null
 
         return prompt
     
+    def _call_api(self, prompt: str, max_tokens: int = 4000) -> tuple[str, dict]:
+        """
+        Call the configured AI provider and return (response_text, usage_dict).
+        """
+        if self.provider == "anthropic":
+            response = self.client.messages.create(
+                model=self.model,
+                max_tokens=max_tokens,
+                temperature=0.3,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            text = response.content[0].text
+            usage = {
+                "input": response.usage.input_tokens,
+                "output": response.usage.output_tokens,
+            }
+
+        elif self.provider in ("openai", "deepseek"):
+            response = self.client.chat.completions.create(
+                model=self.model,
+                max_tokens=max_tokens,
+                temperature=0.3,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            text = response.choices[0].message.content
+            usage = {
+                "input": response.usage.prompt_tokens,
+                "output": response.usage.completion_tokens,
+            }
+
+        elif self.provider == "gemini":
+            response = self.client.models.generate_content(
+                model=self.model,
+                contents=prompt,
+                config={
+                    "temperature": 0.3,
+                    "max_output_tokens": max_tokens,
+                },
+            )
+            text = response.text
+            usage = {
+                "input": response.usage_metadata.prompt_token_count,
+                "output": response.usage_metadata.candidates_token_count,
+            }
+
+        return text, usage
+
+    @staticmethod
+    def _extract_json(text: str) -> str:
+        """Strip markdown code fences from a JSON response."""
+        if "```json" in text:
+            start = text.find("```json") + 7
+            end = text.find("```", start)
+            return text[start:end].strip()
+        if "```" in text:
+            start = text.find("```") + 3
+            end = text.find("```", start)
+            return text[start:end].strip()
+        return text.strip()
+
     def analyze_earnings(self, earnings_text: str, company_name: str = None) -> Dict:
         """
         Analyze an earnings report and return structured results
-        
+
         Args:
             earnings_text: The earnings report text to analyze
             company_name: Optional company name
-            
+
         Returns:
             Dictionary containing structured analysis
         """
         prompt = self.create_analysis_prompt(earnings_text, company_name)
-        
+
         try:
-            response = self.client.messages.create(
-                model=self.model,
-                max_tokens=4000,
-                temperature=0.3,  # Lower temperature for more consistent extraction
-                messages=[
-                    {
-                        "role": "user",
-                        "content": prompt
-                    }
-                ]
-            )
-            
-            # Extract the text response
-            analysis_text = response.content[0].text
-            
-            # Try to parse JSON from the response
-            # Claude might wrap it in markdown code blocks
-            if "```json" in analysis_text:
-                json_start = analysis_text.find("```json") + 7
-                json_end = analysis_text.find("```", json_start)
-                analysis_text = analysis_text[json_start:json_end].strip()
-            elif "```" in analysis_text:
-                json_start = analysis_text.find("```") + 3
-                json_end = analysis_text.find("```", json_start)
-                analysis_text = analysis_text[json_start:json_end].strip()
-            
+            analysis_text, usage = self._call_api(prompt)
+            analysis_text = self._extract_json(analysis_text)
             analysis_data = json.loads(analysis_text)
-            
-            # Add metadata
+
             analysis_data["metadata"] = {
                 "analyzed_at": datetime.now().isoformat(),
+                "provider": self.provider,
                 "model_used": self.model,
-                "token_usage": {
-                    "input": response.usage.input_tokens,
-                    "output": response.usage.output_tokens
-                }
+                "token_usage": usage,
             }
-            
+
             return analysis_data
-            
+
         except json.JSONDecodeError as e:
-            # If JSON parsing fails, return raw analysis
             return {
                 "error": "Failed to parse JSON response",
                 "raw_analysis": analysis_text,
-                "exception": str(e)
+                "exception": str(e),
             }
         except Exception as e:
             return {
                 "error": "Analysis failed",
-                "exception": str(e)
+                "exception": str(e),
             }
     
     def compare_earnings(self, current_report: str, previous_report: str, 
@@ -222,23 +307,10 @@ Provide analysis in JSON format:
 }}"""
 
         try:
-            response = self.client.messages.create(
-                model=self.model,
-                max_tokens=3000,
-                temperature=0.3,
-                messages=[{"role": "user", "content": prompt}]
-            )
-            
-            analysis_text = response.content[0].text
-            
-            # Clean JSON formatting
-            if "```json" in analysis_text:
-                json_start = analysis_text.find("```json") + 7
-                json_end = analysis_text.find("```", json_start)
-                analysis_text = analysis_text[json_start:json_end].strip()
-            
+            analysis_text, _ = self._call_api(prompt, max_tokens=3000)
+            analysis_text = self._extract_json(analysis_text)
             return json.loads(analysis_text)
-            
+
         except Exception as e:
             return {"error": str(e)}
     

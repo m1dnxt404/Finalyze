@@ -22,15 +22,25 @@
             <div id="analyze-tab" class="tab-content active">
                 <div class="input-section">
                     <div class="input-group">
+                        <label for="provider">AI Provider</label>
+                        <select id="provider">
+                            <option value="anthropic">Anthropic (Claude)</option>
+                            <option value="openai">OpenAI (GPT)</option>
+                            <option value="gemini">Google Gemini</option>
+                            <option value="deepseek">DeepSeek</option>
+                        </select>
+                    </div>
+
+                    <div class="input-group">
                         <label for="company-name">Company Name (Optional)</label>
                         <input type="text" id="company-name" placeholder="e.g., Apple Inc.">
                     </div>
-                    
+
                     <div class="input-group">
                         <label for="earnings-text">Earnings Report Text</label>
                         <textarea id="earnings-text" placeholder="Paste the earnings report text here..."></textarea>
                     </div>
-                    
+
                     <button class="btn" onclick="analyzeReport()">Analyze Report</button>
                 </div>
                 
@@ -109,17 +119,18 @@
         async function analyzeReport() {
             const earningsText = document.getElementById('earnings-text').value;
             const companyName = document.getElementById('company-name').value;
-            
+            const provider = document.getElementById('provider').value;
+
             if (!earningsText.trim()) {
                 showError('Please enter earnings report text');
                 return;
             }
-            
+
             // Show loading
             document.getElementById('loading').classList.add('show');
             document.getElementById('results').classList.remove('show');
             document.getElementById('error').classList.remove('show');
-            
+
             try {
                 const response = await fetch('/api/analyze', {
                     method: 'POST',
@@ -128,7 +139,8 @@
                     },
                     body: JSON.stringify({
                         earnings_text: earningsText,
-                        company_name: companyName
+                        company_name: companyName,
+                        provider: provider
                     })
                 });
                 

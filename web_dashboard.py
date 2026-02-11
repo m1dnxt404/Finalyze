@@ -6,10 +6,9 @@ Run with: python web_dashboard.py
 from flask import Flask, render_template, request, jsonify, send_file, send_from_directory
 import json
 from datetime import datetime
-from earnings_analyzer import EarningsReportAnalyzer
+from earnings_analyzer import EarningsReportAnalyzer, PROVIDERS
 
 app = Flask(__name__)
-analyzer = EarningsReportAnalyzer()
 
 # Store analysis history in memory (in production, use a database)
 analysis_history = []
@@ -24,6 +23,11 @@ def index():
     """Main dashboard page"""
     return render_template('dashboard.html')
 
+@app.route('/api/providers', methods=['GET'])
+def get_providers():
+    """Return available AI providers"""
+    return jsonify({key: val["name"] for key, val in PROVIDERS.items()})
+
 @app.route('/api/analyze', methods=['POST'])
 def analyze():
     """API endpoint for analyzing earnings reports"""
@@ -31,11 +35,13 @@ def analyze():
         data = request.get_json()
         earnings_text = data.get('earnings_text', '')
         company_name = data.get('company_name', '')
-        
+        provider = data.get('provider', 'anthropic')
+
         if not earnings_text:
             return jsonify({'error': 'No earnings text provided'}), 400
-        
-        # Perform analysis
+
+        # Perform analysis with selected provider
+        analyzer = EarningsReportAnalyzer(provider=provider)
         result = analyzer.analyze_earnings(earnings_text, company_name)
         
         # Add to history
@@ -84,9 +90,12 @@ def compare_reports():
         previous_text = data.get('previous_report', '')
         company_name = data.get('company_name', '')
         
+        provider = data.get('provider', 'anthropic')
+
         if not current_text or not previous_text:
             return jsonify({'error': 'Both reports required'}), 400
-        
+
+        analyzer = EarningsReportAnalyzer(provider=provider)
         comparison = analyzer.compare_earnings(current_text, previous_text, company_name)
         return jsonify(comparison)
         
@@ -98,7 +107,8 @@ if __name__ == '__main__':
     print("🚀 Starting Earnings Report Analyzer Web Dashboard")
     print("="*70)
     print("\n📍 Access the dashboard at: http://localhost:5000")
-    print("\n💡 Make sure you have set your ANTHROPIC_API_KEY environment variable")
+    print("\n💡 Set API keys for your providers as environment variables:")
+    print("   ANTHROPIC_API_KEY, OPENAI_API_KEY, GEMINI_API_KEY, DEEPSEEK_API_KEY")
     print("\nPress CTRL+C to stop the server\n")
     
     app.run(debug=True, port=5000)
