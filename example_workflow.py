@@ -4,14 +4,19 @@ Demonstrates all major features with real-world usage patterns
 """
 
 import json
+import os
 from datetime import datetime
-from earnings_analyzer import EarningsReportAnalyzer
+from Modules import EarningsReportAnalyzer, generate_investor_brief
 
 def main():
     print("="*80)
     print("AI-POWERED EARNINGS REPORT ANALYZER - COMPLETE WORKFLOW")
     print("="*80)
     
+    # Create outputs directory next to this script
+    output_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "outputs")
+    os.makedirs(output_dir, exist_ok=True)
+
     # Initialize analyzer
     analyzer = EarningsReportAnalyzer()
     
@@ -73,7 +78,7 @@ def main():
     print(f"Management Confidence: {sentiment.get('management_confidence', 'N/A')}")
     
     # Save detailed analysis
-    with open('/mnt/user-data/outputs/nvidia_analysis.json', 'w') as f:
+    with open(os.path.join(output_dir, 'nvidia_analysis.json'), 'w') as f:
         json.dump(nvidia_analysis, f, indent=2)
     print("\n💾 Detailed analysis saved to: nvidia_analysis.json")
     
@@ -83,10 +88,10 @@ def main():
     print("\n\n📝 EXAMPLE 2: Generating Investor Brief")
     print("-"*80)
     
-    brief = analyzer.generate_investor_brief(nvidia_analysis)
+    brief = generate_investor_brief(nvidia_analysis)
     print(brief)
     
-    with open('/mnt/user-data/outputs/nvidia_brief.txt', 'w') as f:
+    with open(os.path.join(output_dir, 'nvidia_brief.txt'), 'w') as f:
         f.write(brief)
     print("💾 Brief saved to: nvidia_brief.txt")
     
@@ -127,7 +132,7 @@ def main():
     for change in comparison.get('key_changes', [])[:3]:
         print(f"  • {change}")
     
-    with open('/mnt/user-data/outputs/nvidia_comparison.json', 'w') as f:
+    with open(os.path.join(output_dir, 'nvidia_comparison.json'), 'w') as f:
         json.dump(comparison, f, indent=2)
     print("\n💾 Comparison saved to: nvidia_comparison.json")
     
@@ -181,7 +186,7 @@ def main():
         print(f"{company:<15} {sentiment_emoji} {data['sentiment_score']:>3}/100    {data['tone']:<12} {data['eps_result']:<12}")
     
     # Save portfolio summary
-    with open('/mnt/user-data/outputs/portfolio_summary.json', 'w') as f:
+    with open(os.path.join(output_dir, 'portfolio_summary.json'), 'w') as f:
         json.dump(portfolio_results, f, indent=2)
     print("\n💾 Portfolio summary saved to: portfolio_summary.json")
     
@@ -253,7 +258,7 @@ def main():
         })
     
     # Save as JSON (can be imported to Excel/Google Sheets)
-    with open('/mnt/user-data/outputs/portfolio_export.json', 'w') as f:
+    with open(os.path.join(output_dir, 'portfolio_export.json'), 'w') as f:
         json.dump(csv_data, f, indent=2)
     
     print("✓ Data exported to: portfolio_export.json")

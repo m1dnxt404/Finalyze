@@ -57,13 +57,15 @@ def extract_from_txt_bytes(data: bytes) -> str:
     return data.decode("utf-8", errors="replace").strip()
 
 
-def extract_from_uploaded_file(file_storage) -> str:
+def extract_from_uploaded_file(data: bytes, filename: str) -> str:
     """
-    Extract text from a Flask FileStorage object.
+    Extract text from uploaded file bytes.
     Validates extension and size, then dispatches to the correct extractor.
+    Framework-agnostic — caller reads the file bytes before calling.
 
     Args:
-        file_storage: Flask request.files entry
+        data: Raw file bytes
+        filename: Original filename (used to determine type)
 
     Returns:
         Extracted text string
@@ -73,13 +75,10 @@ def extract_from_uploaded_file(file_storage) -> str:
         ImportError: if required library is missing
     """
     import os
-    filename = file_storage.filename or ""
     ext = os.path.splitext(filename)[1].lower()
 
     if ext not in ALLOWED_EXTENSIONS:
         raise ValueError(f"Unsupported file type '{ext}'. Allowed: PDF, DOCX, TXT")
-
-    data = file_storage.read()
 
     if len(data) > MAX_FILE_SIZE:
         raise ValueError(f"File too large ({len(data) / 1024 / 1024:.1f} MB). Maximum is 10 MB.")
