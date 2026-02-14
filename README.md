@@ -12,6 +12,9 @@ A Python tool that uses AI to analyze company earnings reports, extract key fina
 - **Risk Assessment**: Red flags, concerns, and risk identification
 - **Report Comparison**: Compare current vs previous quarters to spot trends
 - **Investor Briefs**: Generate concise summaries for quick decision-making
+- **RAG-Powered Query**: Ask natural-language questions across all stored reports
+- **Context-Aware Analysis**: Auto-retrieves past reports for the same company to identify trends
+- **Persistent Storage**: ChromaDB vector store — analysis history survives server restarts
 - **Enhanced Analyzer**: Fetch reports from URLs, search SEC EDGAR filings by ticker
 - **Alert System**: Custom threshold-based alerts for EPS beats, sentiment, red flags
 
@@ -23,14 +26,16 @@ Finalyze/
 │   ├── __init__.py           # Re-exports public API
 │   ├── config.py             # Provider config & constants
 │   ├── providers.py          # AI client factory & unified API calls
-│   ├── prompts.py            # Prompt templates for analysis & comparison
+│   ├── prompts.py            # Prompt templates for analysis, comparison & RAG queries
 │   ├── analyzer.py           # EarningsReportAnalyzer class
-│   └── formatter.py          # Investor brief formatting
+│   ├── formatter.py          # Investor brief formatting
+│   └── store.py              # ChromaDB vector store for persistent storage & retrieval
 ├── text_extractor.py         # PDF, DOCX, TXT, Google Docs extraction
 ├── enhanced_analyzer.py      # URL fetching, SEC search, alerts
 ├── web_dashboard.py          # FastAPI web dashboard
 ├── example_workflow.py       # End-to-end demo script
 ├── requirements.txt
+├── data/chromadb/            # Persistent vector database (auto-created)
 └── templates/
     ├── dashboard.html
     ├── css/styles.css
@@ -127,6 +132,42 @@ analyzer = EarningsReportAnalyzer(provider="deepseek")
 analyzer = EarningsReportAnalyzer(provider="ollama")
 ```
 
+### Context-Aware Analysis
+
+When you analyze a company that already has stored reports, Finalyze automatically retrieves past analyses and feeds them as context. The LLM will reference trends from prior quarters:
+
+```python
+# First analysis — no historical context
+result1 = analyzer.analyze_earnings(q3_text, "NVIDIA")
+
+# Second analysis — automatically uses Q3 as context
+result2 = analyzer.analyze_earnings(q4_text, "NVIDIA")
+# result2 will include cross-quarter trend references like
+# "Revenue grew 12%, accelerating from 8% in the prior quarter"
+```
+
+### Query Stored Reports
+
+Ask natural-language questions across all previously analyzed reports:
+
+```python
+from Modules import query_reports
+
+# Find reports matching a question
+results = query_reports("Which companies had strong revenue growth?", n=5)
+
+# Filter by company
+results = query_reports("What was the gross margin trend?", company="NVIDIA")
+```
+
+Via the API:
+
+```bash
+curl -X POST http://localhost:5000/api/query \
+  -H "Content-Type: application/json" \
+  -d '{"query": "Which companies mentioned AI as a growth driver?", "provider": "anthropic"}'
+```
+
 ### Compare Reports
 
 ```python
@@ -206,14 +247,15 @@ This runs a complete demo covering single-report analysis, investor briefs, quar
 
 ## REST API Endpoints
 
-| Method | Endpoint           | Description                                          |
-| ------ | ------------------ | ---------------------------------------------------- |
-| GET    | `/`                | Web dashboard                                        |
-| GET    | `/api/providers`   | List available AI providers                          |
-| POST   | `/api/analyze`     | Analyze a report (text, file upload, or Google Docs) |
-| POST   | `/api/compare`     | Compare two earnings reports                         |
-| GET    | `/api/history`     | Get analysis history                                 |
-| GET    | `/api/export/{id}` | Export a specific analysis as JSON                   |
+| Method | Endpoint           | Description                                              |
+| ------ | ------------------ | -------------------------------------------------------- |
+| GET    | `/`                | Web dashboard                                            |
+| GET    | `/api/providers`   | List available AI providers                              |
+| POST   | `/api/analyze`     | Analyze a report (text, file upload, or Google Docs)     |
+| POST   | `/api/compare`     | Compare two earnings reports                             |
+| POST   | `/api/query`       | Ask natural-language questions across all stored reports |
+| GET    | `/api/history`     | Get analysis history (persistent via ChromaDB)           |
+| GET    | `/api/export/{id}` | Export a specific analysis as JSON                       |
 
 ## Cost Estimation
 

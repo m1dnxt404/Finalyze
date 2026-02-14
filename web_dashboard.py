@@ -11,7 +11,14 @@ import json
 import tempfile
 import os
 from datetime import datetime
-from Modules import EarningsReportAnalyzer, PROVIDERS
+from Modules import (
+    EarningsReportAnalyzer, PROVIDERS,
+    save_report, get_history, get_report, query_reports, get_company_context,
+)
+from Modules.analyzer import _extract_json
+from Modules.prompts import build_context_aware_prompt, build_query_prompt
+from Modules.providers import create_client, call_provider
+from Modules.config import PROVIDERS as PROVIDER_CONFIG
 from text_extractor import extract_from_uploaded_file, extract_from_google_docs_url
 
 app = FastAPI(title="Finalyze")
@@ -21,9 +28,6 @@ app.mount("/css", StaticFiles(directory="templates/css"), name="css")
 app.mount("/js", StaticFiles(directory="templates/js"), name="js")
 
 templates = Jinja2Templates(directory="templates")
-
-# Store analysis history in memory (in production, use a database)
-analysis_history = []
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -81,19 +85,34 @@ async def analyze(request: Request):
         if not earnings_text or not earnings_text.strip():
             return JSONResponse({"error": "No earnings text provided"}, status_code=400)
 
+        # --- Retrieve historical context for this company ---
+        past_context = []
+        if company_name:
+            past_context = get_company_context(company_name)
+
         # --- Perform analysis with selected provider ---
         analyzer = EarningsReportAnalyzer(provider=provider)
-        result = analyzer.analyze_earnings(earnings_text, company_name)
 
-        # Add to history
-        history_entry = {
-            "id": len(analysis_history),
-            "timestamp": datetime.now().isoformat(),
-            "company": company_name or result.get("company_info", {}).get("name", "Unknown"),
-            "sentiment_score": result.get("sentiment_analysis", {}).get("sentiment_score", 0),
-            "analysis": result,
-        }
-        analysis_history.append(history_entry)
+        if past_context:
+            # Context-aware analysis using historical data
+            prompt = build_context_aware_prompt(earnings_text, company_name, past_context)
+            raw, usage = call_provider(
+                analyzer.client, analyzer.provider, analyzer.model, prompt
+            )
+            result = json.loads(_extract_json(raw))
+            result["metadata"] = {
+                "analyzed_at": datetime.now().isoformat(),
+                "provider": analyzer.provider,
+                "model_used": analyzer.model,
+                "token_usage": usage,
+                "context_reports_used": len(past_context),
+            }
+        else:
+            result = analyzer.analyze_earnings(earnings_text, company_name)
+
+        # Persist to ChromaDB
+        resolved_name = company_name or result.get("company_info", {}).get("name", "Unknown")
+        save_report(result, resolved_name)
 
         return result
 
@@ -102,27 +121,62 @@ async def analyze(request: Request):
 
 
 @app.get("/api/history")
-async def get_history():
-    """Get analysis history"""
-    return analysis_history
+async def history():
+    """Get analysis history from ChromaDB"""
+    return get_history()
 
 
 @app.get("/api/export/{analysis_id}")
-async def export_analysis(analysis_id: int):
+async def export_analysis(analysis_id: str):
     """Export specific analysis as JSON"""
-    if analysis_id >= len(analysis_history):
+    report = get_report(analysis_id)
+    if not report:
         return JSONResponse({"error": "Analysis not found"}, status_code=404)
 
-    analysis = analysis_history[analysis_id]
-
     # Create temporary file
-    filename = f"analysis_{analysis_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+    safe_id = analysis_id.replace("/", "_").replace("\\", "_")
+    filename = f"analysis_{safe_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
     filepath = os.path.join(tempfile.gettempdir(), filename)
 
     with open(filepath, "w", encoding="utf-8") as f:
-        json.dump(analysis, f, indent=2)
+        json.dump(report, f, indent=2)
 
     return FileResponse(filepath, filename=filename, media_type="application/json")
+
+
+@app.post("/api/query")
+async def query(request: Request):
+    """Answer natural-language questions across all stored reports."""
+    try:
+        body = await request.json()
+        user_query = body.get("query", "")
+        provider = body.get("provider", "anthropic")
+        company = body.get("company", None)
+
+        if not user_query.strip():
+            return JSONResponse({"error": "No query provided"}, status_code=400)
+
+        # Retrieve relevant reports from ChromaDB
+        relevant = query_reports(user_query, n=5, company=company or None)
+        if not relevant:
+            return JSONResponse({
+                "answer": "No reports found in the database. Analyze some earnings reports first.",
+                "confidence": "low",
+                "sources": [],
+                "limitations": "No data available.",
+            })
+
+        # Build prompt and call LLM
+        prompt = build_query_prompt(user_query, relevant)
+        client = create_client(provider)
+        model = PROVIDER_CONFIG[provider]["default_model"]
+        raw, _ = call_provider(client, provider, model, prompt)
+
+        result = json.loads(_extract_json(raw))
+        return result
+
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
 
 
 @app.post("/api/compare")
