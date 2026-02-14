@@ -23,7 +23,7 @@ pip install -r requirements.txt
 
 ### 2. Set Your API Key
 
-Get your Anthropic API key from: https://console.anthropic.com/
+Get your Anthropic API key from: **<https://console.anthropic.com/>**
 
 **Option A - Environment Variable:**
 
@@ -35,7 +35,7 @@ export ANTHROPIC_API_KEY='sk-ant-...'
 
 Create a file named `.env`:
 
-```
+```text
 ANTHROPIC_API_KEY=sk-ant-...
 ```
 
@@ -259,32 +259,41 @@ The query endpoint retrieves relevant stored reports from ChromaDB and sends the
 ## Troubleshooting
 
 **"API key not found"**
+
 - Make sure ANTHROPIC_API_KEY is set in your environment
 - Check `.env` file if using one
 
 **"Analysis failed" or JSON parsing errors**
+
 - The earnings text might be too long (>100k characters)
 - Try using just the financial highlights section
 - Check if special characters are causing issues
 
 **Web dashboard won't start**
+
 - Make sure Flask is installed: `pip install flask`
 - Check if port 5000 is already in use
 - Try a different port: `app.run(port=8080)`
 
 **PDF parsing not working**
+
 - Install PyPDF2: `pip install PyPDF2`
 - Some PDFs are image-based and won't extract text
 - Consider using OCR tools first
 
 ## Cost Estimation
 
-With Claude Sonnet 4:
-- Small report (2-3 pages): ~$0.01
-- Medium report (5-10 pages): ~$0.02-0.03
-- Large report (full 10-K): ~$0.05-0.10
+Approximate cost per single earnings report analysis (~2,000 input + ~1,500 output tokens):
 
-Monthly cost for daily analysis of 10 companies: ~$6-10
+| Provider                  | Model             | Per Report | 10 Reports/Day for a Month |
+| ------------------------- | ----------------- | ---------- | -------------------------- |
+| Anthropic Claude Sonnet 4 | claude-sonnet-4   | ~$0.02     | ~$6-10                     |
+| OpenAI GPT-4o             | gpt-4o            | ~$0.02     | ~$6-10                     |
+| Google Gemini 2.0 Flash   | gemini-2.0-flash  | Free tier  | Free-$2                    |
+| DeepSeek                  | deepseek-chat     | < $0.01    | ~$1-3                      |
+| Ollama (local)            | llama3.1          | Free       | Free                       |
+
+Larger reports (full 10-Ks) and RAG queries with historical context will use more tokens and cost proportionally more. Context-aware analysis roughly doubles input tokens since past reports are included in the prompt.
 
 ## Next Steps
 
