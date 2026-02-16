@@ -1,10 +1,11 @@
 # Finalyze - AI-Powered Earnings Report Analyzer
 
-A Python tool that uses AI to analyze company earnings reports, extract key financial metrics, assess sentiment, and generate actionable investor insights. Supports multiple AI providers and ships with a FastAPI web dashboard.
+A Python tool that uses AI to analyze company earnings reports, extract key financial metrics, assess sentiment, and generate actionable investor insights. Built on LangChain for unified multi-provider support and Pydantic for type-safe structured output. Ships with a FastAPI web dashboard, ChromaDB-powered RAG, and persistent storage.
 
 ## Features
 
-- **Multi-Provider AI Support**: Anthropic Claude, OpenAI GPT, Google Gemini, DeepSeek, and Ollama (local)
+- **Multi-Provider AI Support**: Anthropic Claude, OpenAI GPT, Google Gemini, DeepSeek, and Ollama (local) — unified via LangChain
+- **Structured Output**: Pydantic schemas for type-safe, validated analysis results
 - **Web Dashboard**: FastAPI-powered browser UI with real-time analysis
 - **Multiple Input Methods**: Paste text, upload files (PDF, DOCX, TXT), or import from Google Docs
 - **Financial Extraction**: Revenue, EPS, margins, guidance, and segment breakdowns
@@ -25,12 +26,13 @@ Finalyze/
 ├── Modules/                  # Core package
 │   ├── __init__.py           # Re-exports public API
 │   ├── config.py             # Provider config & constants
-│   ├── providers.py          # AI client factory & unified API calls
-│   ├── prompts.py            # Prompt templates for analysis, comparison & RAG queries
-│   ├── analyzer.py           # EarningsReportAnalyzer class
+│   ├── providers.py          # LangChain ChatModel factory (unified .invoke())
+│   ├── prompts.py            # LangChain ChatPromptTemplate definitions
+│   ├── schemas.py            # Pydantic models for structured output
+│   ├── analyzer.py           # EarningsReportAnalyzer (LangChain chains)
 │   ├── formatter.py          # Investor brief formatting
 │   └── store.py              # ChromaDB vector store for persistent storage & retrieval
-├── text_extractor.py         # PDF, DOCX, TXT, Google Docs extraction
+├── text_extractor.py         # LangChain document loaders (PDF, DOCX, TXT, Google Docs)
 ├── enhanced_analyzer.py      # URL fetching, SEC search, alerts
 ├── web_dashboard.py          # FastAPI web dashboard
 ├── example_workflow.py       # End-to-end demo script
@@ -276,9 +278,10 @@ Typical usage per earnings report:
 - Ensure the correct environment variable is set for your chosen provider
 - Check your `.env` file if using one
 
-### JSON parsing errors
+### Structured output errors
 
-- The AI response may include markdown fences; the parser handles most cases
+- LangChain uses tool calling for structured output — ensure your provider/model supports it
+- Ollama models need function-calling support (e.g., llama3.1, mistral)
 - Very long reports (>100k characters) are automatically truncated to relevant sections
 
 ### Web dashboard won't start
@@ -289,7 +292,7 @@ Typical usage per earnings report:
 
 ### PDF parsing not working
 
-- Install PyPDF2: `pip install PyPDF2`
+- Install pypdf: `pip install pypdf`
 - Image-based PDFs won't extract text — use OCR tools first
 
 ## Best Practices

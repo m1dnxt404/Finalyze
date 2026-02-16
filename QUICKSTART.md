@@ -271,13 +271,12 @@ The query endpoint retrieves relevant stored reports from ChromaDB and sends the
 
 **Web dashboard won't start**
 
-- Make sure Flask is installed: `pip install flask`
+- Make sure FastAPI is installed: `pip install fastapi uvicorn`
 - Check if port 5000 is already in use
-- Try a different port: `app.run(port=8080)`
 
 **PDF parsing not working**
 
-- Install PyPDF2: `pip install PyPDF2`
+- Install pypdf: `pip install pypdf`
 - Some PDFs are image-based and won't extract text
 - Consider using OCR tools first
 
@@ -312,7 +311,8 @@ Larger reports (full 10-Ks) and RAG queries with historical context will use mor
 
 ## File Overview
 
-- `Modules/` - Core package (analyzer, providers, prompts, store)
+- `Modules/` - Core package (LangChain-based analyzer, providers, prompts, schemas, store)
+- `Modules/schemas.py` - Pydantic models for structured LLM output
 - `Modules/store.py` - ChromaDB vector store for persistent storage & RAG
 - `enhanced_analyzer.py` - PDF, URL, SEC support
 - `web_dashboard.py` - Browser-based UI with RAG query endpoint

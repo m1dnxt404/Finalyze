@@ -15,10 +15,6 @@ from Modules import (
     EarningsReportAnalyzer, PROVIDERS,
     save_report, get_history, get_report, query_reports, get_company_context,
 )
-from Modules.analyzer import _extract_json
-from Modules.prompts import build_context_aware_prompt, build_query_prompt
-from Modules.providers import create_client, call_provider
-from Modules.config import PROVIDERS as PROVIDER_CONFIG
 from text_extractor import extract_from_uploaded_file, extract_from_google_docs_url
 
 app = FastAPI(title="Finalyze")
@@ -94,19 +90,7 @@ async def analyze(request: Request):
         analyzer = EarningsReportAnalyzer(provider=provider)
 
         if past_context:
-            # Context-aware analysis using historical data
-            prompt = build_context_aware_prompt(earnings_text, company_name, past_context)
-            raw, usage = call_provider(
-                analyzer.client, analyzer.provider, analyzer.model, prompt
-            )
-            result = json.loads(_extract_json(raw))
-            result["metadata"] = {
-                "analyzed_at": datetime.now().isoformat(),
-                "provider": analyzer.provider,
-                "model_used": analyzer.model,
-                "token_usage": usage,
-                "context_reports_used": len(past_context),
-            }
+            result = analyzer.analyze_with_context(earnings_text, company_name, past_context)
         else:
             result = analyzer.analyze_earnings(earnings_text, company_name)
 
@@ -166,13 +150,9 @@ async def query(request: Request):
                 "limitations": "No data available.",
             })
 
-        # Build prompt and call LLM
-        prompt = build_query_prompt(user_query, relevant)
-        client = create_client(provider)
-        model = PROVIDER_CONFIG[provider]["default_model"]
-        raw, _ = call_provider(client, provider, model, prompt)
-
-        result = json.loads(_extract_json(raw))
+        # Use the analyzer's query method (LangChain structured output)
+        analyzer = EarningsReportAnalyzer(provider=provider)
+        result = analyzer.query(user_query, relevant)
         return result
 
     except Exception as e:

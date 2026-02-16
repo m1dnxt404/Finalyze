@@ -1,19 +1,20 @@
 """
-Text extraction module for various document formats.
+Text extraction module using LangChain document loaders.
 Supports PDF, DOCX, TXT files and Google Docs URLs.
 """
 
-import io
+import os
 import re
+import tempfile
 
 try:
-    import PyPDF2
+    from langchain_community.document_loaders import PyPDFLoader
     PDF_AVAILABLE = True
 except ImportError:
     PDF_AVAILABLE = False
 
 try:
-    import docx
+    from langchain_community.document_loaders import Docx2txtLoader
     DOCX_AVAILABLE = True
 except ImportError:
     DOCX_AVAILABLE = False
@@ -29,22 +30,40 @@ MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
 ALLOWED_EXTENSIONS = {'.pdf', '.docx', '.txt'}
 
 
+def _bytes_to_tempfile(data: bytes, suffix: str) -> str:
+    """Write bytes to a temporary file and return the path. Caller must delete."""
+    tmp = tempfile.NamedTemporaryFile(suffix=suffix, delete=False)
+    tmp.write(data)
+    tmp.close()
+    return tmp.name
+
+
 def extract_from_pdf_bytes(data: bytes) -> str:
-    """Extract text from PDF file bytes."""
+    """Extract text from PDF file bytes using LangChain PyPDFLoader."""
     if not PDF_AVAILABLE:
-        raise ImportError("PyPDF2 is required for PDF support. Install with: pip install PyPDF2")
-    reader = PyPDF2.PdfReader(io.BytesIO(data))
-    pages = [page.extract_text() or "" for page in reader.pages]
-    return "\n".join(pages).strip()
+        raise ImportError("langchain-community and pypdf are required for PDF support. "
+                          "Install with: pip install langchain-community pypdf")
+    path = _bytes_to_tempfile(data, ".pdf")
+    try:
+        loader = PyPDFLoader(path)
+        docs = loader.load()
+        return "\n".join(doc.page_content for doc in docs).strip()
+    finally:
+        os.unlink(path)
 
 
 def extract_from_docx_bytes(data: bytes) -> str:
-    """Extract text from DOCX file bytes."""
+    """Extract text from DOCX file bytes using LangChain Docx2txtLoader."""
     if not DOCX_AVAILABLE:
-        raise ImportError("python-docx is required for DOCX support. Install with: pip install python-docx")
-    document = docx.Document(io.BytesIO(data))
-    paragraphs = [p.text for p in document.paragraphs if p.text.strip()]
-    return "\n".join(paragraphs).strip()
+        raise ImportError("langchain-community and docx2txt are required for DOCX support. "
+                          "Install with: pip install langchain-community docx2txt")
+    path = _bytes_to_tempfile(data, ".docx")
+    try:
+        loader = Docx2txtLoader(path)
+        docs = loader.load()
+        return "\n".join(doc.page_content for doc in docs).strip()
+    finally:
+        os.unlink(path)
 
 
 def extract_from_txt_bytes(data: bytes) -> str:
@@ -60,8 +79,7 @@ def extract_from_txt_bytes(data: bytes) -> str:
 def extract_from_uploaded_file(data: bytes, filename: str) -> str:
     """
     Extract text from uploaded file bytes.
-    Validates extension and size, then dispatches to the correct extractor.
-    Framework-agnostic — caller reads the file bytes before calling.
+    Validates extension and size, then dispatches to the correct loader.
 
     Args:
         data: Raw file bytes
@@ -74,7 +92,6 @@ def extract_from_uploaded_file(data: bytes, filename: str) -> str:
         ValueError: if file type is unsupported or file is too large
         ImportError: if required library is missing
     """
-    import os
     ext = os.path.splitext(filename)[1].lower()
 
     if ext not in ALLOWED_EXTENSIONS:
@@ -109,7 +126,6 @@ def extract_from_google_docs_url(url: str) -> str:
     if not REQUESTS_AVAILABLE:
         raise ImportError("requests is required for Google Docs support. Install with: pip install requests")
 
-    # Extract the document ID from various Google Docs URL formats
     match = re.search(r"/document/d/([a-zA-Z0-9_-]+)", url)
     if not match:
         raise ValueError("Invalid Google Docs URL. Expected a URL like https://docs.google.com/document/d/...")
