@@ -258,23 +258,23 @@ The query endpoint retrieves relevant stored reports from ChromaDB and sends the
 
 ## Troubleshooting
 
-**"API key not found"**
+### "API key not found"
 
 - Make sure ANTHROPIC_API_KEY is set in your environment
 - Check `.env` file if using one
 
-**"Analysis failed" or JSON parsing errors**
+### "Analysis failed" or JSON parsing errors
 
 - The earnings text might be too long (>100k characters)
 - Try using just the financial highlights section
 - Check if special characters are causing issues
 
-**Web dashboard won't start**
+### Web dashboard won't start
 
 - Make sure FastAPI is installed: `pip install fastapi uvicorn`
 - Check if port 5000 is already in use
 
-**PDF parsing not working**
+### PDF parsing not working
 
 - Install pypdf: `pip install pypdf`
 - Some PDFs are image-based and won't extract text
