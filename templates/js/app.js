@@ -609,18 +609,326 @@ async function loadReport(reportId) {
     }
 }
 
-function exportCurrentReport() {
+/* ── Export ─────────────────────────────────────────────────────── */
+
+function toggleExportMenu() {
+    const menu = document.getElementById('export-menu');
+    menu.classList.toggle('show');
+}
+
+// Close menu when clicking outside
+document.addEventListener('click', e => {
+    const dropdown = document.getElementById('export-btn');
+    const menu = document.getElementById('export-menu');
+    if (dropdown && menu && !dropdown.contains(e.target)) {
+        menu.classList.remove('show');
+    }
+});
+
+function exportAs(format) {
+    document.getElementById('export-menu').classList.remove('show');
     if (!currentReportData) return;
-    const json = JSON.stringify(currentReportData, null, 2);
-    const blob = new Blob([json], { type: 'application/json' });
+    if (format === 'txt') exportAsTxt();
+    else if (format === 'pdf') exportAsPdf();
+}
+
+function getExportFilename(ext) {
+    const name = currentReportData.company_info?.name || 'analysis';
+    const quarter = currentReportData.company_info?.reporting_period || '';
+    const safe = (name + (quarter ? '_' + quarter : '')).replace(/[^a-zA-Z0-9]/g, '_');
+    return safe + '.' + ext;
+}
+
+function buildReportText() {
+    const d = currentReportData;
+    const ci = d.company_info || {};
+    const fm = d.financial_metrics || {};
+    const rev = fm.revenue || {};
+    const earn = fm.earnings || {};
+    const mar = fm.margins || {};
+    const guid = fm.guidance || {};
+    const sent = d.sentiment_analysis || {};
+    const meta = d.metadata || {};
+
+    const lines = [];
+    const hr = '='.repeat(60);
+    const sr = '-'.repeat(40);
+
+    lines.push(hr);
+    lines.push('EARNINGS ANALYSIS REPORT');
+    lines.push(hr);
+    lines.push('');
+
+    // Company info
+    if (ci.name) lines.push('Company:    ' + ci.name);
+    if (ci.ticker) lines.push('Ticker:     ' + ci.ticker);
+    if (ci.reporting_period) lines.push('Period:     ' + ci.reporting_period);
+    if (ci.report_date) lines.push('Date:       ' + ci.report_date);
+    if (meta.provider) lines.push('Provider:   ' + (meta.provider || '') + ' (' + (meta.model_used || '') + ')');
+    lines.push('');
+
+    // Financial metrics
+    lines.push(sr);
+    lines.push('FINANCIAL METRICS');
+    lines.push(sr);
+    lines.push('');
+    if (rev.current) lines.push('Revenue (current):     ' + rev.current);
+    if (rev.previous) lines.push('Revenue (previous):    ' + rev.previous);
+    if (rev.yoy_growth) lines.push('YoY Growth:            ' + rev.yoy_growth);
+    if (rev.confidence != null) lines.push('Revenue Confidence:    ' + rev.confidence + '%');
+    lines.push('');
+    if (earn.eps_reported) lines.push('EPS Reported:          ' + earn.eps_reported);
+    if (earn.eps_expected) lines.push('EPS Expected:          ' + earn.eps_expected);
+    if (earn.beat_miss) lines.push('Beat/Miss:             ' + earn.beat_miss);
+    if (earn.net_income) lines.push('Net Income:            ' + earn.net_income);
+    if (earn.confidence != null) lines.push('Earnings Confidence:   ' + earn.confidence + '%');
+    lines.push('');
+    if (mar.gross_margin) lines.push('Gross Margin:          ' + mar.gross_margin);
+    if (mar.operating_margin) lines.push('Operating Margin:      ' + mar.operating_margin);
+    if (mar.net_margin) lines.push('Net Margin:            ' + mar.net_margin);
+    if (mar.confidence != null) lines.push('Margins Confidence:    ' + mar.confidence + '%');
+    lines.push('');
+    if (guid.provided != null) {
+        lines.push('Guidance Provided:     ' + (guid.provided ? 'Yes' : 'No'));
+        if (guid.next_quarter_revenue) lines.push('Next Q Revenue:        ' + guid.next_quarter_revenue);
+        if (guid.next_quarter_eps) lines.push('Next Q EPS:            ' + guid.next_quarter_eps);
+        if (guid.full_year) lines.push('Full Year:             ' + guid.full_year);
+        lines.push('');
+    }
+
+    // Sentiment
+    lines.push(sr);
+    lines.push('SENTIMENT ANALYSIS');
+    lines.push(sr);
+    lines.push('');
+    if (sent.overall_tone) lines.push('Overall Tone:          ' + sent.overall_tone);
+    if (sent.management_confidence) lines.push('Mgmt Confidence:       ' + sent.management_confidence);
+    if (sent.forward_outlook) lines.push('Forward Outlook:       ' + sent.forward_outlook);
+    if (sent.sentiment_score != null) lines.push('Sentiment Score:       ' + sent.sentiment_score + ' / 100');
+    if (sent.confidence != null) lines.push('Sentiment Confidence:  ' + sent.confidence + '%');
+    lines.push('');
+
+    // Key highlights
+    if (d.key_highlights?.length) {
+        lines.push(sr);
+        lines.push('KEY HIGHLIGHTS');
+        lines.push(sr);
+        lines.push('');
+        d.key_highlights.forEach((h, i) => lines.push((i + 1) + '. ' + h));
+        lines.push('');
+    }
+
+    // Concerns
+    if (d.concerns_risks?.length) {
+        lines.push(sr);
+        lines.push('CONCERNS & RISKS');
+        lines.push(sr);
+        lines.push('');
+        d.concerns_risks.forEach((c, i) => lines.push((i + 1) + '. ' + c));
+        lines.push('');
+    }
+
+    // Red flags
+    if (d.red_flags?.length) {
+        lines.push(sr);
+        lines.push('RED FLAGS');
+        lines.push(sr);
+        lines.push('');
+        d.red_flags.forEach((r, i) => lines.push((i + 1) + '. ' + r));
+        lines.push('');
+    }
+
+    // Executive summary
+    if (d.analyst_summary) {
+        lines.push(sr);
+        lines.push('EXECUTIVE SUMMARY');
+        lines.push(sr);
+        lines.push('');
+        lines.push(d.analyst_summary);
+        lines.push('');
+    }
+
+    lines.push(hr);
+    lines.push('Generated by Finalyze');
+    lines.push(hr);
+
+    return lines.join('\n');
+}
+
+function exportAsTxt() {
+    const text = buildReportText();
+    const blob = new Blob([text], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    const name = currentReportData.company_info?.name || 'analysis';
-    const ts = new Date().toISOString().slice(0, 10);
     a.href = url;
-    a.download = name.replace(/[^a-zA-Z0-9]/g, '_') + '_' + ts + '.json';
+    a.download = getExportFilename('txt');
     a.click();
     URL.revokeObjectURL(url);
+}
+
+function exportAsPdf() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+
+    const d = currentReportData;
+    const ci = d.company_info || {};
+    const fm = d.financial_metrics || {};
+    const rev = fm.revenue || {};
+    const earn = fm.earnings || {};
+    const mar = fm.margins || {};
+    const sent = d.sentiment_analysis || {};
+    const meta = d.metadata || {};
+
+    const pageW = doc.internal.pageSize.getWidth();
+    const margin = 20;
+    const contentW = pageW - margin * 2;
+    let y = 20;
+
+    function checkPage(needed) {
+        if (y + needed > 275) { doc.addPage(); y = 20; }
+    }
+
+    function heading(text) {
+        checkPage(14);
+        doc.setFontSize(13);
+        doc.setFont(undefined, 'bold');
+        doc.setTextColor(108, 92, 231);
+        doc.text(text, margin, y);
+        y += 4;
+        doc.setDrawColor(108, 92, 231);
+        doc.setLineWidth(0.4);
+        doc.line(margin, y, margin + contentW, y);
+        y += 8;
+    }
+
+    function label(lbl, val) {
+        if (!val && val !== 0) return;
+        checkPage(7);
+        doc.setFontSize(9);
+        doc.setFont(undefined, 'bold');
+        doc.setTextColor(100);
+        doc.text(lbl, margin, y);
+        doc.setFont(undefined, 'normal');
+        doc.setTextColor(40);
+        doc.text(String(val), margin + 45, y);
+        y += 6;
+    }
+
+    function bodyText(text) {
+        doc.setFontSize(9);
+        doc.setFont(undefined, 'normal');
+        doc.setTextColor(40);
+        const lines = doc.splitTextToSize(text, contentW);
+        lines.forEach(line => {
+            checkPage(6);
+            doc.text(line, margin, y);
+            y += 5;
+        });
+    }
+
+    function bulletList(items) {
+        doc.setFontSize(9);
+        doc.setFont(undefined, 'normal');
+        doc.setTextColor(40);
+        items.forEach(item => {
+            const lines = doc.splitTextToSize(item, contentW - 6);
+            lines.forEach((line, i) => {
+                checkPage(6);
+                if (i === 0) doc.text('\u2022', margin, y);
+                doc.text(line, margin + 6, y);
+                y += 5;
+            });
+            y += 1;
+        });
+    }
+
+    // Title
+    doc.setFontSize(20);
+    doc.setFont(undefined, 'bold');
+    doc.setTextColor(30);
+    doc.text(ci.name || 'Earnings Analysis', margin, y);
+    y += 8;
+
+    if (ci.reporting_period || ci.ticker) {
+        doc.setFontSize(11);
+        doc.setFont(undefined, 'normal');
+        doc.setTextColor(100);
+        doc.text([ci.ticker, ci.reporting_period].filter(Boolean).join('  |  '), margin, y);
+        y += 6;
+    }
+    if (meta.provider) {
+        doc.setFontSize(8);
+        doc.setTextColor(150);
+        doc.text('Analyzed with ' + meta.provider + ' (' + (meta.model_used || '') + ')', margin, y);
+        y += 10;
+    }
+
+    // Financial Metrics
+    heading('Financial Metrics');
+    label('Revenue:', rev.current);
+    label('Previous:', rev.previous);
+    label('YoY Growth:', rev.yoy_growth);
+    if (rev.confidence != null) label('Confidence:', rev.confidence + '%');
+    y += 2;
+    label('EPS Reported:', earn.eps_reported);
+    label('EPS Expected:', earn.eps_expected);
+    label('Beat/Miss:', earn.beat_miss);
+    if (earn.confidence != null) label('Confidence:', earn.confidence + '%');
+    y += 2;
+    label('Gross Margin:', mar.gross_margin);
+    label('Operating Margin:', mar.operating_margin);
+    label('Net Margin:', mar.net_margin);
+    if (mar.confidence != null) label('Confidence:', mar.confidence + '%');
+    y += 4;
+
+    // Sentiment
+    heading('Sentiment Analysis');
+    label('Overall Tone:', sent.overall_tone);
+    label('Mgmt Confidence:', sent.management_confidence);
+    label('Forward Outlook:', sent.forward_outlook);
+    label('Score:', sent.sentiment_score != null ? sent.sentiment_score + ' / 100' : null);
+    if (sent.confidence != null) label('Confidence:', sent.confidence + '%');
+    y += 4;
+
+    // Highlights
+    if (d.key_highlights?.length) {
+        heading('Key Highlights');
+        bulletList(d.key_highlights);
+        y += 4;
+    }
+
+    // Concerns
+    if (d.concerns_risks?.length) {
+        heading('Concerns & Risks');
+        bulletList(d.concerns_risks);
+        y += 4;
+    }
+
+    // Red flags
+    if (d.red_flags?.length) {
+        heading('Red Flags');
+        bulletList(d.red_flags);
+        y += 4;
+    }
+
+    // Summary
+    if (d.analyst_summary) {
+        heading('Executive Summary');
+        bodyText(d.analyst_summary);
+        y += 4;
+    }
+
+    // Footer
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setTextColor(150);
+        doc.text('Generated by Finalyze', margin, 290);
+        doc.text('Page ' + i + ' of ' + pageCount, pageW - margin - 20, 290);
+    }
+
+    doc.save(getExportFilename('pdf'));
 }
 
 function showError(message) {
