@@ -1,12 +1,13 @@
 # Finalyze - AI-Powered Earnings Report Analyzer
 
-A Python tool that uses AI to analyze company earnings reports, extract key financial metrics, assess sentiment, and generate actionable investor insights. Built on LangChain for unified multi-provider support and Pydantic for type-safe structured output. Ships with a FastAPI web dashboard, ChromaDB-powered RAG, and persistent storage.
+A Python tool that uses AI to analyze company earnings reports, extract key financial metrics, assess sentiment, and generate actionable investor insights. Built on LangChain for unified multi-provider support and Pydantic for type-safe structured output. Ships with a FastAPI web dashboard, interactive Chart.js visualizations, ChromaDB-powered RAG, and persistent storage.
 
 ## Features
 
 - **Multi-Provider AI Support**: Anthropic Claude, OpenAI GPT, Google Gemini, DeepSeek, and Ollama (local) — unified via LangChain
 - **Structured Output**: Pydantic schemas for type-safe, validated analysis results
 - **Web Dashboard**: FastAPI-powered browser UI with real-time analysis
+- **Interactive Charts**: Chart.js visualizations — revenue trends, EPS comparison, margin breakdown, and sentiment gauge
 - **Multiple Input Methods**: Paste text, upload files (PDF, DOCX, TXT), or import from Google Docs
 - **Financial Extraction**: Revenue, EPS, margins, guidance, and segment breakdowns
 - **Sentiment Analysis**: Overall tone, management confidence, forward outlook (scored 0-100)
@@ -16,6 +17,7 @@ A Python tool that uses AI to analyze company earnings reports, extract key fina
 - **RAG-Powered Query**: Ask natural-language questions across all stored reports
 - **Context-Aware Analysis**: Auto-retrieves past reports for the same company to identify trends
 - **Persistent Storage**: ChromaDB vector store — analysis history survives server restarts
+- **Historical Trend Charts**: Automatically overlays past quarter data when multiple reports exist for a company
 - **Enhanced Analyzer**: Fetch reports from URLs, search SEC EDGAR filings by ticker
 - **Alert System**: Custom threshold-based alerts for EPS beats, sentiment, red flags
 
@@ -41,18 +43,41 @@ Finalyze/
 └── templates/
     ├── dashboard.html
     ├── css/styles.css
-    └── js/app.js
+    └── js/app.js             # Chart.js rendering + dashboard logic
 ```
+
+## Requirements
+
+- **Python 3.12 or 3.13** (3.14+ is not yet supported by ChromaDB and some LangChain dependencies)
+- At least one AI provider API key
 
 ## Setup
 
-### 1. Install Dependencies
+### 1. Create a Virtual Environment
+
+Using Python 3.12 or 3.13 is required. If your system default is a different version, specify the path explicitly.
+
+**Linux/Mac:**
+
+```bash
+python3.12 -m venv .venv
+source .venv/bin/activate
+```
+
+**Windows (PowerShell):**
+
+```powershell
+py -3.12 -m venv .venv
+.venv\Scripts\Activate
+```
+
+### 2. Install Dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 2. Set Up API Keys
+### 3. Set Up API Keys
 
 Set at least one provider's API key as an environment variable:
 
@@ -99,6 +124,8 @@ Open <http://localhost:5000> in your browser. The dashboard supports:
 - Uploading PDF, DOCX, or TXT files
 - Importing from a public Google Docs URL
 - Choosing your AI provider
+- Interactive charts: revenue, EPS, margins, and sentiment gauge
+- Historical trend overlays when multiple reports exist for a company
 - Viewing analysis history and exporting results
 
 API docs are available at <http://localhost:5000/docs>.
@@ -214,6 +241,19 @@ python example_workflow.py
 
 This runs a complete demo covering single-report analysis, investor briefs, quarterly comparisons, batch portfolio analysis, and alert generation. Results are saved to the `outputs/` directory.
 
+## Dashboard Charts
+
+The web dashboard includes four interactive Chart.js visualizations that render after each analysis:
+
+| Chart | Type | Description |
+| ----- | ---- | ----------- |
+| Revenue | Bar / Line | Current vs previous revenue; trend line across quarters when history exists |
+| EPS | Bar / Line | Reported vs expected EPS (green for beat, red for miss); historical trend overlay |
+| Margins | Horizontal Bar | Gross, operating, and net margin percentages side-by-side |
+| Sentiment | Doughnut Gauge | 0-100 half-doughnut with color coding (green >70, yellow >40, red ≤40) |
+
+When multiple reports have been analyzed for the same company, the revenue and EPS charts automatically overlay historical trend lines using data from ChromaDB.
+
 ## Output Structure
 
 ```json
@@ -249,15 +289,16 @@ This runs a complete demo covering single-report analysis, investor briefs, quar
 
 ## REST API Endpoints
 
-| Method | Endpoint           | Description                                              |
-| ------ | ------------------ | -------------------------------------------------------- |
-| GET    | `/`                | Web dashboard                                            |
-| GET    | `/api/providers`   | List available AI providers                              |
-| POST   | `/api/analyze`     | Analyze a report (text, file upload, or Google Docs)     |
-| POST   | `/api/compare`     | Compare two earnings reports                             |
-| POST   | `/api/query`       | Ask natural-language questions across all stored reports |
-| GET    | `/api/history`     | Get analysis history (persistent via ChromaDB)           |
-| GET    | `/api/export/{id}` | Export a specific analysis as JSON                       |
+| Method | Endpoint               | Description                                              |
+| ------ | ---------------------- | -------------------------------------------------------- |
+| GET    | `/`                    | Web dashboard                                            |
+| GET    | `/api/providers`       | List available AI providers                              |
+| POST   | `/api/analyze`         | Analyze a report (text, file upload, or Google Docs)     |
+| POST   | `/api/compare`         | Compare two earnings reports                             |
+| POST   | `/api/query`           | Ask natural-language questions across all stored reports  |
+| GET    | `/api/history`         | Get analysis history (persistent via ChromaDB)           |
+| GET    | `/api/export/{id}`     | Export a specific analysis as JSON                       |
+| GET    | `/api/company-history` | Get historical financial metrics for trend charts        |
 
 ## Cost Estimation
 
@@ -272,6 +313,12 @@ Typical usage per earnings report:
 | Ollama (local)   | N/A          | N/A           | Free                 |
 
 ## Troubleshooting
+
+### Python version incompatibility
+
+- This project requires **Python 3.12 or 3.13**
+- Python 3.14+ is not yet supported (ChromaDB and LangChain depend on Pydantic v1 internals that break on 3.14)
+- Check your version with `python --version` and create a venv with a compatible version if needed
 
 ### API key not found
 
