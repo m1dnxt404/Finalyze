@@ -731,6 +731,70 @@ textarea {
     color: var(--text-muted);
 }
 
+/* ── Risk categorization ────────────────────────────────────────── */
+
+.risks-card h3 { color: var(--yellow); }
+
+.risk-categories {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.risk-category {
+    display: none;
+}
+
+.risk-category.has-items { display: block; }
+
+.risk-tag {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 3px 10px;
+    border-radius: 6px;
+    margin-bottom: 8px;
+}
+
+.risk-tag.regulatory  { background: rgba(168,85,247,0.15); color: #a855f7; }
+.risk-tag.market      { background: rgba(245,158,11,0.15); color: var(--yellow); }
+.risk-tag.competition { background: rgba(239,68,68,0.15);  color: var(--red); }
+.risk-tag.operational { background: rgba(108,92,231,0.15); color: var(--accent); }
+.risk-tag.macro       { background: rgba(16,185,129,0.15); color: var(--green); }
+
+.risk-category ul {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.risk-category li {
+    position: relative;
+    padding-left: 16px;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--text-muted);
+}
+
+.risk-category li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 8px;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+}
+
+.risk-category:nth-child(1) li::before { background: #a855f7; }
+.risk-category:nth-child(2) li::before { background: var(--yellow); }
+.risk-category:nth-child(3) li::before { background: var(--red); }
+.risk-category:nth-child(4) li::before { background: var(--accent); }
+.risk-category:nth-child(5) li::before { background: var(--green); }
+
 /* ── History ─────────────────────────────────────────────────────── */
 
 .section-header {

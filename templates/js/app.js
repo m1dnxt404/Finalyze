@@ -221,6 +221,32 @@ function resetConfidenceBadges() {
     });
 }
 
+function renderCategorizedRisks(risks) {
+    const section = document.getElementById('risks-section');
+    const categories = ['regulatory', 'market', 'competition', 'operational', 'macro'];
+    let hasAny = false;
+
+    categories.forEach(cat => {
+        const el = document.getElementById('risk-' + cat);
+        const ul = el.querySelector('ul');
+        ul.innerHTML = '';
+        const items = risks?.[cat] || [];
+        if (items.length) {
+            hasAny = true;
+            el.classList.add('has-items');
+            items.forEach(text => {
+                const li = document.createElement('li');
+                li.textContent = text;
+                ul.appendChild(li);
+            });
+        } else {
+            el.classList.remove('has-items');
+        }
+    });
+
+    section.style.display = hasAny ? '' : 'none';
+}
+
 function displayResults(data) {
     currentReportData = data;
     document.getElementById('export-btn').style.display = '';
@@ -280,6 +306,9 @@ function displayResults(data) {
         li.textContent = c;
         concernsList.appendChild(li);
     });
+
+    // Categorized risks
+    renderCategorizedRisks(data.categorized_risks);
 
     // Summary
     document.getElementById('summary').textContent =
@@ -728,6 +757,25 @@ function buildReportText() {
         lines.push('');
     }
 
+    // Categorized risks
+    const riskCats = d.categorized_risks || {};
+    const riskLabels = { regulatory: 'Regulatory', market: 'Market', competition: 'Competition', operational: 'Operational', macro: 'Macro Environment' };
+    const hasRisks = Object.values(riskLabels).some((_, i) => (riskCats[Object.keys(riskLabels)[i]] || []).length);
+    if (hasRisks) {
+        lines.push(sr);
+        lines.push('RISK CATEGORIZATION');
+        lines.push(sr);
+        lines.push('');
+        for (const [key, label] of Object.entries(riskLabels)) {
+            const items = riskCats[key] || [];
+            if (items.length) {
+                lines.push('[' + label + ']');
+                items.forEach((r, i) => lines.push('  ' + (i + 1) + '. ' + r));
+                lines.push('');
+            }
+        }
+    }
+
     // Red flags
     if (d.red_flags?.length) {
         lines.push(sr);
@@ -901,6 +949,28 @@ function exportAsPdf() {
     if (d.concerns_risks?.length) {
         heading('Concerns & Risks');
         bulletList(d.concerns_risks);
+        y += 4;
+    }
+
+    // Categorized risks
+    const pdfRisks = d.categorized_risks || {};
+    const pdfRiskLabels = { regulatory: 'Regulatory', market: 'Market', competition: 'Competition', operational: 'Operational', macro: 'Macro Environment' };
+    const pdfHasRisks = Object.keys(pdfRiskLabels).some(k => (pdfRisks[k] || []).length);
+    if (pdfHasRisks) {
+        heading('Risk Categorization');
+        for (const [key, rlabel] of Object.entries(pdfRiskLabels)) {
+            const items = pdfRisks[key] || [];
+            if (items.length) {
+                checkPage(10);
+                doc.setFontSize(10);
+                doc.setFont(undefined, 'bold');
+                doc.setTextColor(80);
+                doc.text(rlabel, margin, y);
+                y += 6;
+                bulletList(items);
+                y += 2;
+            }
+        }
         y += 4;
     }
 

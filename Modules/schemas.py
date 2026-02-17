@@ -85,12 +85,21 @@ class HistoricalComparison(BaseModel):
     declining_areas: Optional[List[str]] = Field(None, description="Metrics or areas showing decline")
 
 
+class CategorizedRisks(BaseModel):
+    regulatory: Optional[List[str]] = Field(None, description="Regulatory and compliance risks (government policy, legal, SEC)")
+    market: Optional[List[str]] = Field(None, description="Market risks (demand shifts, pricing pressure, currency)")
+    competition: Optional[List[str]] = Field(None, description="Competitive risks (market share loss, new entrants, disruption)")
+    operational: Optional[List[str]] = Field(None, description="Operational risks (supply chain, execution, workforce, technology)")
+    macro: Optional[List[str]] = Field(None, description="Macroeconomic risks (recession, inflation, interest rates, geopolitical)")
+
+
 class EarningsAnalysis(BaseModel):
     """Complete structured earnings report analysis."""
     company_info: Optional[CompanyInfo] = None
     financial_metrics: Optional[FinancialMetrics] = None
     key_highlights: Optional[List[str]] = Field(None, description="Most important positive developments")
     concerns_risks: Optional[List[str]] = Field(None, description="Challenges and risk factors")
+    categorized_risks: Optional[CategorizedRisks] = None
     sentiment_analysis: Optional[SentimentAnalysis] = None
     business_segments: Optional[List[BusinessSegment]] = None
     notable_quotes: Optional[List[NotableQuote]] = None

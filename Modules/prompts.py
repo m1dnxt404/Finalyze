@@ -18,6 +18,12 @@ Provide a comprehensive analysis covering:
 - Financial metrics: revenue (current, previous, YoY growth, currency), earnings (EPS reported vs expected, beat/miss, net income), margins (gross, operating, net), and guidance (if provided)
 - Key highlights and positive developments
 - Concerns, risks, and headwinds
+- Categorized risks — classify each identified risk into one of these categories:
+  * Regulatory (government policy, legal, compliance, SEC)
+  * Market (demand shifts, pricing pressure, currency exposure)
+  * Competition (market share loss, new entrants, disruption)
+  * Operational (supply chain, execution, workforce, technology)
+  * Macro (recession, inflation, interest rates, geopolitical)
 - Sentiment analysis: overall tone (bullish/neutral/bearish), management confidence (high/medium/low), forward outlook (optimistic/cautious/pessimistic), and a sentiment score from 0-100
 - Business segment breakdown with performance and revenue contribution
 - Notable management quotes with speaker and context
@@ -47,6 +53,7 @@ Provide a comprehensive analysis covering:
 - Company identification (name, ticker, reporting period, date)
 - Financial metrics: revenue, earnings, margins, and guidance
 - Key highlights and concerns/risks
+- Categorized risks — classify each risk into: Regulatory, Market, Competition, Operational, or Macro
 - Sentiment analysis with a score from 0-100
 - Business segments, notable quotes, market implications
 - Historical comparison: trends across quarters, improving areas, declining areas
