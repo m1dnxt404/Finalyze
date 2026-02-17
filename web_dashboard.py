@@ -159,6 +159,13 @@ async def query(request: Request):
         return JSONResponse({"error": str(e)}, status_code=500)
 
 
+@app.get("/api/company-history")
+async def company_history(company: str):
+    """Return historical financial metrics for a company (for trend charts)."""
+    from Modules.store import get_company_metrics
+    return get_company_metrics(company)
+
+
 @app.post("/api/compare")
 async def compare_reports(request: Request):
     """Compare two earnings reports"""

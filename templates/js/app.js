@@ -8,6 +8,24 @@ const PROVIDER_LABELS = {
 let currentInputMethod = 'paste';
 let selectedFile = null;
 
+/* ── Chart instances (destroy before re-creating) ─────────────── */
+
+let revenueChart, epsChart, marginsChart, sentimentChart;
+
+/* ── Chart.js dark theme defaults ─────────────────────────────── */
+
+Chart.defaults.color = '#8b8fa3';
+Chart.defaults.borderColor = '#2a2d3e';
+
+const CHART_COLORS = {
+    accent: '#6c5ce7',
+    accentAlt: '#a855f7',
+    green: '#10b981',
+    yellow: '#f59e0b',
+    red: '#ef4444',
+    muted: '#8b8fa3'
+};
+
 function switchTab(tabName) {
     document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('active'));
     event.currentTarget.classList.add('active');
@@ -222,7 +240,300 @@ function displayResults(data) {
     document.getElementById('summary').textContent =
         data.analyst_summary || 'No summary available';
 
+    // Render charts
+    renderCharts(data);
+
     document.getElementById('results').classList.add('show');
+
+    // Fetch historical trend data if company name is available
+    const companyName = data.company_info?.name ||
+        document.getElementById('company-name').value;
+    if (companyName) {
+        fetchAndOverlayHistory(companyName);
+    }
+}
+
+/* ── Chart helpers ─────────────────────────────────────────────── */
+
+function parseNumeric(str) {
+    if (str == null) return null;
+    if (typeof str === 'number') return str;
+    const cleaned = String(str).replace(/[^0-9.\-]/g, '');
+    const num = parseFloat(cleaned);
+    return isNaN(num) ? null : num;
+}
+
+function destroyCharts() {
+    [revenueChart, epsChart, marginsChart, sentimentChart].forEach(c => {
+        if (c) c.destroy();
+    });
+    revenueChart = epsChart = marginsChart = sentimentChart = null;
+}
+
+/* ── Render all 4 charts ───────────────────────────────────────── */
+
+function renderCharts(data) {
+    destroyCharts();
+
+    const fm = data.financial_metrics || {};
+    const revenue = fm.revenue || {};
+    const earnings = fm.earnings || {};
+    const margins = fm.margins || {};
+    const sentiment = data.sentiment_analysis || {};
+
+    // 1. Revenue bar chart
+    const revCurrent = parseNumeric(revenue.current);
+    const revPrevious = parseNumeric(revenue.previous);
+    const revCtx = document.getElementById('revenue-chart').getContext('2d');
+
+    const revLabels = [];
+    const revData = [];
+    const revColors = [];
+    if (revPrevious != null) {
+        revLabels.push('Previous');
+        revData.push(revPrevious);
+        revColors.push(CHART_COLORS.muted);
+    }
+    if (revCurrent != null) {
+        revLabels.push('Current');
+        revData.push(revCurrent);
+        revColors.push(CHART_COLORS.accent);
+    }
+
+    if (revData.length) {
+        revenueChart = new Chart(revCtx, {
+            type: 'bar',
+            data: {
+                labels: revLabels,
+                datasets: [{
+                    label: 'Revenue',
+                    data: revData,
+                    backgroundColor: revColors,
+                    borderRadius: 6,
+                    maxBarThickness: 60
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true, grid: { color: '#2a2d3e' } },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
+    }
+
+    // 2. EPS bar chart
+    const epsReported = parseNumeric(earnings.eps_reported);
+    const epsExpected = parseNumeric(earnings.eps_expected);
+    const epsCtx = document.getElementById('eps-chart').getContext('2d');
+
+    const epsLabels = [];
+    const epsDataArr = [];
+    const epsColors = [];
+    if (epsExpected != null) {
+        epsLabels.push('Expected');
+        epsDataArr.push(epsExpected);
+        epsColors.push(CHART_COLORS.muted);
+    }
+    if (epsReported != null) {
+        epsLabels.push('Reported');
+        epsDataArr.push(epsReported);
+        const beatColor = (earnings.beat_miss || '').toLowerCase() === 'beat'
+            ? CHART_COLORS.green : CHART_COLORS.red;
+        epsColors.push(epsExpected != null ? beatColor : CHART_COLORS.accent);
+    }
+
+    if (epsDataArr.length) {
+        epsChart = new Chart(epsCtx, {
+            type: 'bar',
+            data: {
+                labels: epsLabels,
+                datasets: [{
+                    label: 'EPS',
+                    data: epsDataArr,
+                    backgroundColor: epsColors,
+                    borderRadius: 6,
+                    maxBarThickness: 60
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { grid: { color: '#2a2d3e' } },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
+    }
+
+    // 3. Margins horizontal bar chart
+    const grossMargin = parseNumeric(margins.gross_margin);
+    const opMargin = parseNumeric(margins.operating_margin);
+    const netMargin = parseNumeric(margins.net_margin);
+    const marginsCtx = document.getElementById('margins-chart').getContext('2d');
+
+    const mLabels = [];
+    const mData = [];
+    const mColors = [];
+    if (grossMargin != null) {
+        mLabels.push('Gross');
+        mData.push(grossMargin);
+        mColors.push(CHART_COLORS.green);
+    }
+    if (opMargin != null) {
+        mLabels.push('Operating');
+        mData.push(opMargin);
+        mColors.push(CHART_COLORS.yellow);
+    }
+    if (netMargin != null) {
+        mLabels.push('Net');
+        mData.push(netMargin);
+        mColors.push(CHART_COLORS.accent);
+    }
+
+    if (mData.length) {
+        marginsChart = new Chart(marginsCtx, {
+            type: 'bar',
+            data: {
+                labels: mLabels,
+                datasets: [{
+                    label: 'Margin %',
+                    data: mData,
+                    backgroundColor: mColors,
+                    borderRadius: 6,
+                    maxBarThickness: 40
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        max: 100,
+                        grid: { color: '#2a2d3e' },
+                        ticks: { callback: v => v + '%' }
+                    },
+                    y: { grid: { display: false } }
+                }
+            }
+        });
+    }
+
+    // 4. Sentiment doughnut gauge
+    const score = sentiment.sentiment_score || 0;
+    const sentCtx = document.getElementById('sentiment-chart').getContext('2d');
+
+    const gaugeColor = score > 70 ? CHART_COLORS.green
+        : score > 40 ? CHART_COLORS.yellow
+        : CHART_COLORS.red;
+
+    sentimentChart = new Chart(sentCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Score', 'Remaining'],
+            datasets: [{
+                data: [score, 100 - score],
+                backgroundColor: [gaugeColor, '#2a2d3e'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '75%',
+            rotation: -90,
+            circumference: 180,
+            plugins: {
+                legend: { display: false },
+                tooltip: { enabled: false }
+            }
+        },
+        plugins: [{
+            id: 'sentimentCenterText',
+            afterDraw(chart) {
+                const { ctx, chartArea } = chart;
+                const cx = (chartArea.left + chartArea.right) / 2;
+                const cy = chartArea.bottom - 10;
+                ctx.save();
+                ctx.font = 'bold 28px -apple-system, BlinkMacSystemFont, sans-serif';
+                ctx.fillStyle = gaugeColor;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(score, cx, cy);
+                ctx.font = '12px -apple-system, BlinkMacSystemFont, sans-serif';
+                ctx.fillStyle = '#8b8fa3';
+                ctx.fillText('/ 100', cx, cy + 20);
+                ctx.restore();
+            }
+        }]
+    });
+}
+
+/* ── Historical trend overlay ──────────────────────────────────── */
+
+async function fetchAndOverlayHistory(companyName) {
+    try {
+        const res = await fetch('/api/company-history?company=' + encodeURIComponent(companyName));
+        const history = await res.json();
+
+        if (!Array.isArray(history) || history.length < 2) return;
+
+        // Add trend line to revenue chart
+        if (revenueChart) {
+            const revPoints = history
+                .map(h => ({ label: h.quarter || '', value: parseNumeric(h.revenue_current) }))
+                .filter(p => p.value != null);
+
+            if (revPoints.length >= 2) {
+                revenueChart.data.labels = revPoints.map(p => p.label);
+                revenueChart.data.datasets = [{
+                    type: 'line',
+                    label: 'Revenue Trend',
+                    data: revPoints.map(p => p.value),
+                    borderColor: CHART_COLORS.accent,
+                    backgroundColor: CHART_COLORS.accent + '33',
+                    fill: true,
+                    tension: 0.3,
+                    pointBackgroundColor: CHART_COLORS.accent,
+                    pointRadius: 4
+                }];
+                revenueChart.update();
+            }
+        }
+
+        // Add trend line to EPS chart
+        if (epsChart) {
+            const epsPoints = history
+                .map(h => ({ label: h.quarter || '', value: parseNumeric(h.eps_reported) }))
+                .filter(p => p.value != null);
+
+            if (epsPoints.length >= 2) {
+                epsChart.data.labels = epsPoints.map(p => p.label);
+                epsChart.data.datasets = [{
+                    type: 'line',
+                    label: 'EPS Trend',
+                    data: epsPoints.map(p => p.value),
+                    borderColor: CHART_COLORS.green,
+                    backgroundColor: CHART_COLORS.green + '33',
+                    fill: true,
+                    tension: 0.3,
+                    pointBackgroundColor: CHART_COLORS.green,
+                    pointRadius: 4
+                }];
+                epsChart.update();
+            }
+        }
+    } catch (err) {
+        console.error('Failed to load company history:', err);
+    }
 }
 
 function showError(message) {

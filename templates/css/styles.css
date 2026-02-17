@@ -571,6 +571,17 @@ textarea {
 
 /* ── Detail cards ────────────────────────────────────────────────── */
 
+.chart-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+    margin-bottom: 18px;
+}
+
+.chart-card canvas {
+    max-height: 220px;
+}
+
 .detail-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -702,6 +713,7 @@ textarea {
     .metric-grid {
         grid-template-columns: repeat(2, 1fr);
     }
+    .chart-grid,
     .detail-grid {
         grid-template-columns: 1fr;
     }

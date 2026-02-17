@@ -186,3 +186,46 @@ def get_company_context(company: str, n: int = 3) -> List[Dict]:
 
     reports.sort(key=lambda x: x["timestamp"], reverse=True)
     return reports[:n]
+
+
+def get_company_metrics(company: str) -> List[Dict]:
+    """Return historical financial metrics for a company, sorted oldest-first (for trend charts)."""
+    collection = _get_collection()
+
+    if collection.count() == 0:
+        return []
+
+    results = collection.get(
+        where={"company": company},
+        include=["metadatas"],
+    )
+
+    if not results["ids"]:
+        return []
+
+    metrics = []
+    for meta in results["metadatas"]:
+        analysis = json.loads(meta.get("analysis_json", "{}"))
+        fm = analysis.get("financial_metrics") or {}
+        revenue = fm.get("revenue") or {}
+        earnings = fm.get("earnings") or {}
+        margins = fm.get("margins") or {}
+        sentiment = analysis.get("sentiment_analysis") or {}
+
+        metrics.append({
+            "quarter": meta.get("quarter", ""),
+            "timestamp": meta.get("timestamp", ""),
+            "revenue_current": revenue.get("current"),
+            "revenue_previous": revenue.get("previous"),
+            "yoy_growth": revenue.get("yoy_growth"),
+            "eps_reported": earnings.get("eps_reported"),
+            "eps_expected": earnings.get("eps_expected"),
+            "beat_miss": earnings.get("beat_miss"),
+            "gross_margin": margins.get("gross_margin"),
+            "operating_margin": margins.get("operating_margin"),
+            "net_margin": margins.get("net_margin"),
+            "sentiment_score": sentiment.get("sentiment_score"),
+        })
+
+    metrics.sort(key=lambda x: x["timestamp"])
+    return metrics
