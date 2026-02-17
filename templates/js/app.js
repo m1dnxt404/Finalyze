@@ -7,6 +7,7 @@ const PROVIDER_LABELS = {
 
 let currentInputMethod = 'paste';
 let selectedFile = null;
+let currentReportData = null;
 
 /* ── Chart instances (destroy before re-creating) ─────────────── */
 
@@ -221,6 +222,9 @@ function resetConfidenceBadges() {
 }
 
 function displayResults(data) {
+    currentReportData = data;
+    document.getElementById('export-btn').style.display = '';
+
     // Model badge
     const model = data.metadata?.model_used || '';
     const providerName = data.metadata?.provider || '';
@@ -603,6 +607,20 @@ async function loadReport(reportId) {
     } finally {
         document.getElementById('loading').classList.remove('show');
     }
+}
+
+function exportCurrentReport() {
+    if (!currentReportData) return;
+    const json = JSON.stringify(currentReportData, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const name = currentReportData.company_info?.name || 'analysis';
+    const ts = new Date().toISOString().slice(0, 10);
+    a.href = url;
+    a.download = name.replace(/[^a-zA-Z0-9]/g, '_') + '_' + ts + '.json';
+    a.click();
+    URL.revokeObjectURL(url);
 }
 
 function showError(message) {

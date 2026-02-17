@@ -525,6 +525,12 @@ textarea {
     font-weight: 700;
 }
 
+.results-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
 .results-model {
     font-size: 12px;
     color: var(--text-muted);
@@ -532,6 +538,26 @@ textarea {
     border: 1px solid var(--border);
     padding: 4px 12px;
     border-radius: 20px;
+}
+
+.btn-export {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 6px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--text);
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+}
+
+.btn-export:hover {
+    border-color: var(--accent);
+    background: rgba(108,92,231,0.1);
 }
 
 /* ── Metric grid ─────────────────────────────────────────────────── */
