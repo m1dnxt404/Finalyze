@@ -21,6 +21,7 @@ class Revenue(BaseModel):
     previous: Optional[str] = Field(None, description="Revenue for comparison period")
     yoy_growth: Optional[str] = Field(None, description="Year-over-year growth percentage")
     currency: Optional[str] = Field(None, description="Currency, e.g. USD, EUR")
+    confidence: Optional[int] = Field(None, description="Confidence in extracted revenue data, 0-100")
 
 
 class Earnings(BaseModel):
@@ -28,12 +29,14 @@ class Earnings(BaseModel):
     eps_expected: Optional[str] = Field(None, description="Expected/Consensus EPS")
     beat_miss: Optional[str] = Field(None, description="beat, miss, or inline")
     net_income: Optional[str] = Field(None, description="Net income value")
+    confidence: Optional[int] = Field(None, description="Confidence in extracted earnings data, 0-100")
 
 
 class Margins(BaseModel):
     gross_margin: Optional[str] = Field(None, description="Gross margin percentage")
     operating_margin: Optional[str] = Field(None, description="Operating margin percentage")
     net_margin: Optional[str] = Field(None, description="Net margin percentage")
+    confidence: Optional[int] = Field(None, description="Confidence in extracted margin data, 0-100")
 
 
 class Guidance(BaseModel):
@@ -55,6 +58,7 @@ class SentimentAnalysis(BaseModel):
     management_confidence: Optional[str] = Field(None, description="high, medium, or low")
     forward_outlook: Optional[str] = Field(None, description="optimistic, cautious, or pessimistic")
     sentiment_score: Optional[int] = Field(None, description="0-100 where 100 is most positive")
+    confidence: Optional[int] = Field(None, description="Confidence in sentiment assessment, 0-100")
 
 
 class BusinessSegment(BaseModel):

@@ -25,6 +25,12 @@ Provide a comprehensive analysis covering:
 - Red flags or concerning patterns
 - A 2-3 paragraph analyst summary
 
+For each metric category (revenue, earnings, margins, sentiment), also provide a confidence score from 0-100 indicating how confident you are in the extracted data:
+- 90-100: Data is explicitly and clearly stated in the report
+- 70-89: Data is present but requires minor interpretation or calculation
+- 40-69: Data is partially available, inferred, or ambiguous
+- 0-39: Data is largely estimated or not directly supported by the report text
+
 If information is not available in the report, use null. Focus on actionable insights.""")
 ])
 
@@ -46,6 +52,12 @@ Provide a comprehensive analysis covering:
 - Historical comparison: trends across quarters, improving areas, declining areas
 - Red flags
 - A 2-3 paragraph analyst summary that references trends from prior quarters
+
+For each metric category (revenue, earnings, margins, sentiment), also provide a confidence score from 0-100 indicating how confident you are in the extracted data:
+- 90-100: Data is explicitly and clearly stated in the report
+- 70-89: Data is present but requires minor interpretation or calculation
+- 40-69: Data is partially available, inferred, or ambiguous
+- 0-39: Data is largely estimated or not directly supported by the report text
 
 If information is not available, use null. Focus on actionable insights and cross-quarter trends.""")
 ])

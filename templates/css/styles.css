@@ -569,6 +569,26 @@ textarea {
 .sentiment-neutral  { color: var(--yellow); }
 .sentiment-negative { color: var(--red); }
 
+.confidence-badge {
+    display: none;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 10px;
+    margin-top: 8px;
+    letter-spacing: 0.3px;
+}
+
+.confidence-badge.show { display: inline-block; }
+
+.confidence-high   { background: rgba(16,185,129,0.15); color: var(--green); }
+.confidence-medium { background: rgba(245,158,11,0.15); color: var(--yellow); }
+.confidence-low    { background: rgba(239,68,68,0.15);  color: var(--red); }
+
+.metric-box.low-confidence {
+    border-left: 3px solid var(--red);
+}
+
 /* ── Detail cards ────────────────────────────────────────────────── */
 
 .chart-grid {
@@ -669,6 +689,7 @@ textarea {
     align-items: center;
     justify-content: space-between;
     transition: border-color 0.2s;
+    cursor: pointer;
 }
 
 .history-card:hover {

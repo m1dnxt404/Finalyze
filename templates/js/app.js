@@ -187,6 +187,39 @@ async function analyzeReport() {
     }
 }
 
+/* ── Confidence badges ──────────────────────────────────────────── */
+
+function setConfidence(elementId, boxElement, score) {
+    const badge = document.getElementById(elementId);
+    if (!badge || score == null) return;
+
+    badge.textContent = score + '% confident';
+    badge.classList.add('show');
+    badge.classList.remove('confidence-high', 'confidence-medium', 'confidence-low');
+
+    if (score >= 70) {
+        badge.classList.add('confidence-high');
+    } else if (score >= 40) {
+        badge.classList.add('confidence-medium');
+    } else {
+        badge.classList.add('confidence-low');
+    }
+
+    if (boxElement) {
+        boxElement.classList.toggle('low-confidence', score < 40);
+    }
+}
+
+function resetConfidenceBadges() {
+    document.querySelectorAll('.confidence-badge').forEach(b => {
+        b.classList.remove('show', 'confidence-high', 'confidence-medium', 'confidence-low');
+        b.textContent = '';
+    });
+    document.querySelectorAll('.metric-box').forEach(b => {
+        b.classList.remove('low-confidence');
+    });
+}
+
 function displayResults(data) {
     // Model badge
     const model = data.metadata?.model_used || '';
@@ -217,6 +250,14 @@ function displayResults(data) {
     // Revenue growth
     document.getElementById('revenue-growth').textContent =
         data.financial_metrics?.revenue?.yoy_growth || 'N/A';
+
+    // Confidence badges
+    const metricBoxes = document.querySelectorAll('.metric-box');
+    resetConfidenceBadges();
+    setConfidence('sentiment-confidence', metricBoxes[0], data.sentiment_analysis?.confidence);
+    setConfidence('tone-confidence', metricBoxes[1], data.sentiment_analysis?.confidence);
+    setConfidence('eps-confidence', metricBoxes[2], data.financial_metrics?.earnings?.confidence);
+    setConfidence('revenue-confidence', metricBoxes[3], data.financial_metrics?.revenue?.confidence);
 
     // Highlights
     const highlightsList = document.getElementById('highlights-list');
@@ -536,6 +577,34 @@ async function fetchAndOverlayHistory(companyName) {
     }
 }
 
+/* ── Load report from history ───────────────────────────────────── */
+
+async function loadReport(reportId) {
+    // Switch to analyze tab
+    document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('active'));
+    document.querySelector('.nav-item').classList.add('active');
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    document.getElementById('analyze-tab').classList.add('active');
+
+    document.getElementById('loading').classList.add('show');
+    document.getElementById('results').classList.remove('show');
+    document.getElementById('error').classList.remove('show');
+
+    try {
+        const res = await fetch('/api/report/' + encodeURIComponent(reportId));
+        const data = await res.json();
+        if (res.ok) {
+            displayResults(data);
+        } else {
+            showError(data.error || 'Failed to load report');
+        }
+    } catch (err) {
+        showError('Network error: ' + err.message);
+    } finally {
+        document.getElementById('loading').classList.remove('show');
+    }
+}
+
 function showError(message) {
     const errorDiv = document.getElementById('error');
     errorDiv.textContent = message;
@@ -574,6 +643,7 @@ async function loadHistory() {
                 '</div>' +
                 '<div class="history-score">' + (item.sentiment_score || 0) + '</div>';
 
+            card.addEventListener('click', () => loadReport(item.id));
             historyList.appendChild(card);
         });
     } catch (error) {

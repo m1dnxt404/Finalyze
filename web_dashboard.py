@@ -110,6 +110,15 @@ async def history():
     return get_history()
 
 
+@app.get("/api/report/{analysis_id}")
+async def get_report_data(analysis_id: str):
+    """Return full analysis data for rendering in the dashboard."""
+    report = get_report(analysis_id)
+    if not report:
+        return JSONResponse({"error": "Analysis not found"}, status_code=404)
+    return report["analysis"]
+
+
 @app.get("/api/export/{analysis_id}")
 async def export_analysis(analysis_id: str):
     """Export specific analysis as JSON"""

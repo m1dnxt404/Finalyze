@@ -295,7 +295,7 @@ When multiple reports have been analyzed for the same company, the revenue and E
 | GET    | `/api/providers`       | List available AI providers                              |
 | POST   | `/api/analyze`         | Analyze a report (text, file upload, or Google Docs)     |
 | POST   | `/api/compare`         | Compare two earnings reports                             |
-| POST   | `/api/query`           | Ask natural-language questions across all stored reports  |
+| POST   | `/api/query`           | Ask natural-language questions across all stored reports |
 | GET    | `/api/history`         | Get analysis history (persistent via ChromaDB)           |
 | GET    | `/api/export/{id}`     | Export a specific analysis as JSON                       |
 | GET    | `/api/company-history` | Get historical financial metrics for trend charts        |
