@@ -659,6 +659,7 @@ function exportAs(format) {
     if (!currentReportData) return;
     if (format === 'txt') exportAsTxt();
     else if (format === 'pdf') exportAsPdf();
+    else if (format === 'csv') exportAsCsv();
 }
 
 function getExportFilename(ext) {
@@ -810,6 +811,68 @@ function exportAsTxt() {
     const a = document.createElement('a');
     a.href = url;
     a.download = getExportFilename('txt');
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+function exportAsCsv() {
+    const d = currentReportData;
+    const ci = d.company_info || {};
+    const fm = d.financial_metrics || {};
+    const rev = fm.revenue || {};
+    const earn = fm.earnings || {};
+    const mar = fm.margins || {};
+    const guid = fm.guidance || {};
+    const sent = d.sentiment_analysis || {};
+
+    const rows = [
+        ['Category', 'Metric', 'Value', 'Confidence'],
+        ['Company', 'Name', ci.name || '', ''],
+        ['Company', 'Ticker', ci.ticker || '', ''],
+        ['Company', 'Period', ci.reporting_period || '', ''],
+        ['Company', 'Report Date', ci.report_date || '', ''],
+        ['Revenue', 'Current', rev.current || '', rev.confidence ?? ''],
+        ['Revenue', 'Previous', rev.previous || '', ''],
+        ['Revenue', 'YoY Growth', rev.yoy_growth || '', ''],
+        ['Revenue', 'Currency', rev.currency || '', ''],
+        ['Earnings', 'EPS Reported', earn.eps_reported || '', earn.confidence ?? ''],
+        ['Earnings', 'EPS Expected', earn.eps_expected || '', ''],
+        ['Earnings', 'Beat/Miss', earn.beat_miss || '', ''],
+        ['Earnings', 'Net Income', earn.net_income || '', ''],
+        ['Margins', 'Gross Margin', mar.gross_margin || '', mar.confidence ?? ''],
+        ['Margins', 'Operating Margin', mar.operating_margin || '', ''],
+        ['Margins', 'Net Margin', mar.net_margin || '', ''],
+        ['Guidance', 'Provided', guid.provided != null ? String(guid.provided) : '', ''],
+        ['Guidance', 'Next Quarter Revenue', guid.next_quarter_revenue || '', ''],
+        ['Guidance', 'Next Quarter EPS', guid.next_quarter_eps || '', ''],
+        ['Guidance', 'Full Year', guid.full_year || '', ''],
+        ['Sentiment', 'Overall Tone', sent.overall_tone || '', sent.confidence ?? ''],
+        ['Sentiment', 'Management Confidence', sent.management_confidence || '', ''],
+        ['Sentiment', 'Forward Outlook', sent.forward_outlook || '', ''],
+        ['Sentiment', 'Score (0-100)', sent.sentiment_score ?? '', ''],
+    ];
+
+    // Add segment data if available
+    if (d.business_segments && d.business_segments.length) {
+        d.business_segments.forEach(seg => {
+            rows.push(['Segment', seg.name || '', seg.revenue_contribution || '', '']);
+        });
+    }
+
+    const csvContent = rows.map(row =>
+        row.map(cell => {
+            const str = String(cell);
+            return str.includes(',') || str.includes('"') || str.includes('\n')
+                ? '"' + str.replace(/"/g, '""') + '"'
+                : str;
+        }).join(',')
+    ).join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = getExportFilename('csv');
     a.click();
     URL.revokeObjectURL(url);
 }
